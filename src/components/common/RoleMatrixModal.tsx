@@ -18,9 +18,10 @@ import {
 interface RoleMatrixModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenLimitConfig?: () => void;
 }
 
-export const RoleMatrixModal: React.FC<RoleMatrixModalProps> = ({ isOpen, onClose }) => {
+export const RoleMatrixModal: React.FC<RoleMatrixModalProps> = ({ isOpen, onClose, onOpenLimitConfig }) => {
   const { roles, activeRole, setActiveRole } = useApp();
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<UserRole | 'all'>('all');
   const [activeTab, setActiveTab] = useState<'matrix' | 'keuangan_flow'>('matrix');
@@ -80,6 +81,18 @@ export const RoleMatrixModal: React.FC<RoleMatrixModalProps> = ({ isOpen, onClos
             >
               Penjelasan Alur Keuangan (Otomatis vs Input Manual)
             </button>
+            {onOpenLimitConfig && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenLimitConfig();
+                }}
+                className="px-3 py-1.5 rounded-lg font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 border border-amber-400/50 transition flex items-center gap-1.5"
+                title="Direktur dapat mengatur atau mengedit limit nominal masing-masing role secara manual"
+              >
+                <span>⚙️ Atur Limit Manual (Direktur)</span>
+              </button>
+            )}
           </div>
 
           {activeTab === 'matrix' && (

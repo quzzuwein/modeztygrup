@@ -15,8 +15,104 @@ import {
   WarningAlert,
   AuditLog,
   RoleInfo,
-  UserRole
+  UserRole,
+  AppUser,
+  MasterAdminSettings,
+  RevenueRecognition
 } from '../types';
+
+export const INITIAL_ADMIN_SETTINGS: MasterAdminSettings = {
+  ownerName: 'Ir. Hendra Gunawan (Super Administrator)',
+  ownerEmail: 'modezty.jaya.abadi@gmail.com',
+  isSecurityLocked: false,
+  adminPin: '1234',
+  systemName: 'KontraktorPro Enterprise ERP'
+};
+
+export const INITIAL_USERS: AppUser[] = [
+  {
+    id: 'usr-1',
+    fullName: 'Ir. Hendra Gunawan, M.T.',
+    email: 'modezty.jaya.abadi@gmail.com',
+    phone: '0812-9988-7766',
+    assignedRole: 'direktur',
+    companyId: 'pt-1',
+    isActive: true,
+    isSuperAdmin: true,
+    createdAt: '2026-01-01',
+    lastLogin: '2026-10-21 22:30'
+  },
+  {
+    id: 'usr-2',
+    fullName: 'Ir. Ahmad Zarkasih, M.Sc.',
+    email: 'zarkasih.pm@wkpm-konstruksi.co.id',
+    phone: '0813-1122-3344',
+    assignedRole: 'pm_teknik',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    isActive: true,
+    createdAt: '2026-01-15',
+    lastLogin: '2026-10-21 16:45'
+  },
+  {
+    id: 'usr-3',
+    fullName: 'Deni Kurniawan, S.T.',
+    email: 'deni.sm@wkpm-konstruksi.co.id',
+    phone: '0815-5566-7788',
+    assignedRole: 'site_manager',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    isActive: true,
+    createdAt: '2026-01-15',
+    lastLogin: '2026-10-21 17:10'
+  },
+  {
+    id: 'usr-4',
+    fullName: 'Budi Santoso',
+    email: 'budi.lapangan@wkpm-konstruksi.co.id',
+    phone: '0818-4433-2211',
+    assignedRole: 'pelaksana',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    isActive: true,
+    createdAt: '2026-01-20',
+    lastLogin: '2026-10-21 08:30'
+  },
+  {
+    id: 'usr-5',
+    fullName: 'Rangga Wijaya',
+    email: 'procurement@wkpm-konstruksi.co.id',
+    phone: '0817-7788-9900',
+    assignedRole: 'procurement',
+    companyId: 'pt-1',
+    isActive: true,
+    createdAt: '2026-01-10',
+    lastLogin: '2026-10-21 11:20'
+  },
+  {
+    id: 'usr-6',
+    fullName: 'Siti Rahmawati, S.E., Ak.',
+    email: 'finance@wkpm-konstruksi.co.id',
+    phone: '0812-3344-5566',
+    assignedRole: 'admin_keuangan',
+    companyId: 'pt-1',
+    isActive: true,
+    createdAt: '2026-01-05',
+    lastLogin: '2026-10-21 15:40'
+  },
+  {
+    id: 'usr-7',
+    fullName: 'Herman Susanto',
+    email: 'gudang.site@wkpm-konstruksi.co.id',
+    phone: '0819-2233-4455',
+    assignedRole: 'logistik_lapangan',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    isActive: true,
+    createdAt: '2026-01-20',
+    lastLogin: '2026-10-21 14:15'
+  }
+];
 
 export const ROLES: RoleInfo[] = [
   {
@@ -28,6 +124,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 10_000_000_000,
     description: 'Akses penuh lintas seluruh PT & proyek. Memantau portfolio profitabilitas, deviasi biaya/jadwal, dan menyetujui transaksi bernilai tinggi.',
     allowedTabs: ['dashboard', 'ahs', 'rab', 'rap', 'logistik', 'upah', 'progres', 'keuangan', 'laporan', 'audit'],
+    defaultTab: 'dashboard',
     canView: [
       'Portofolio konsolidasi seluruh PT & Proyek',
       'Nilai kontrak, RAB, RAP, realisasi biaya, dan margin laba',
@@ -38,7 +135,8 @@ export const ROLES: RoleInfo[] = [
     canInput: [
       'Target margin laba proyek (% dan nominal)',
       'Kebijakan anggaran dan batas pagu RAP',
-      'Penetapan penanggung jawab proyek (PM/SM)'
+      'Penetapan penanggung jawab proyek (PM/SM)',
+      'Pengaturan limit wewenang approval nominal seluruh role'
     ],
     canApproveItems: [
       'Final RAP & revisi pagu anggaran proyek',
@@ -46,7 +144,13 @@ export const ROLES: RoleInfo[] = [
       'Perubahan kontrak / Addendum pekerjaan',
       'Pencairan dana khusus / deviasi kritis'
     ],
-    financialAutomation: 'Melihat ringkasan laba rugi otomatis dan menyetujui pencairan di atas wewenang operasional.'
+    financialAutomation: 'Melihat ringkasan laba rugi otomatis dan menyetujui pencairan di atas wewenang operasional.',
+    quickActions: [
+      { label: 'Otorisasi PO Supplier (> Rp 500 Jt)', actionId: 'auth_po', targetTab: 'logistik', isUrgent: true },
+      { label: 'Atur Batas Limit Nominal 12 Role', actionId: 'config_limits', targetTab: 'dashboard' },
+      { label: 'Review Target Laba & Plafon RAP', actionId: 'review_rap', targetTab: 'rap' },
+      { label: 'Cetak Laporan Konsolidasi BAPP', actionId: 'print_bapp', targetTab: 'laporan' }
+    ]
   },
   {
     id: 'pm_teknik',
@@ -57,6 +161,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 500_000_000,
     description: 'Memimpin pelaksanaan proyek teknis, memvalidasi RAB/RAP, menyetujui SPB material & SPK borong, serta memitigasi deviasi.',
     allowedTabs: ['dashboard', 'ahs', 'rab', 'rap', 'logistik', 'upah', 'progres', 'laporan', 'audit'],
+    defaultTab: 'progres',
     canView: [
       'RAB kontrak dan rincian AHS pekerjaan',
       'RAP internal (anggaran bahan, upah, alat, overhead)',
@@ -75,7 +180,13 @@ export const ROLES: RoleInfo[] = [
       'SPK Borongan & klaim upah mandor (s/d Rp 500 Jt)',
       'Laporan kemajuan fisik mingguan untuk BAPP'
     ],
-    financialAutomation: 'Persetujuan PM atas klaim upah otomatis meneruskan data ke Bagian Keuangan dengan status "Siap Bayar".'
+    financialAutomation: 'Persetujuan PM atas klaim upah otomatis meneruskan data ke Bagian Keuangan dengan status "Siap Bayar".',
+    quickActions: [
+      { label: 'Persetujuan Final SPB Lapangan', actionId: 'approve_spb', targetTab: 'logistik', isUrgent: true },
+      { label: 'Validasi Klaim Upah Mandor (Tahap 2)', actionId: 'approve_wage', targetTab: 'upah', isUrgent: true },
+      { label: 'Analisis Deviasi Kurva S (SPI/CPI)', actionId: 'analyze_scurve', targetTab: 'progres' },
+      { label: 'Verifikasi Pemetaan AHS PUPR', actionId: 'map_ahs', targetTab: 'rab' }
+    ]
   },
   {
     id: 'admin_teknik',
@@ -86,6 +197,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Mengunggah & validasi RAB Excel, menghubungkan AHS PUPR, menyusun draf RAP, dan mengelola dokumen teknis.',
     allowedTabs: ['dashboard', 'ahs', 'rab', 'rap', 'progres', 'laporan'],
+    defaultTab: 'rab',
     canView: [
       'File RAB Excel yang diimpor dari klien/estimator',
       'Database master AHS PUPR dan SNI',
@@ -101,7 +213,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Tidak memiliki wewenang approval transaksi (Hanya draf teknis)'
     ],
-    financialAutomation: 'Input AHS dan RAB otomatis menghasilkan kalkulasi kebutuhan belanja material & anggaran upah untuk RAP internal.'
+    financialAutomation: 'Input AHS dan RAB otomatis menghasilkan kalkulasi kebutuhan belanja material & anggaran upah untuk RAP internal.',
+    quickActions: [
+      { label: 'Upload & Parse RAB Excel AI', actionId: 'import_rab', targetTab: 'rab', isUrgent: true },
+      { label: 'Hubungkan Item ke AHS PUPR', actionId: 'map_ahs', targetTab: 'rab' },
+      { label: 'Hitung Volume & Draf RAP', actionId: 'calc_rap', targetTab: 'rap' }
+    ]
   },
   {
     id: 'admin_keuangan',
@@ -112,6 +229,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 100_000_000,
     description: 'Mencatat penerimaan termin klien, memverifikasi tagihan PO & upah, mencairkan pembayaran, serta membukukan PPN & PPh Final.',
     allowedTabs: ['dashboard', 'keuangan', 'upah', 'logistik', 'laporan', 'audit'],
+    defaultTab: 'keuangan',
     canView: [
       'Antrean tagihan otomatis dari PO supplier yang barangnya sudah diterima (BAST)',
       'Klaim upah mandor yang disetujui PM (lengkap dengan PPh 21)',
@@ -129,7 +247,13 @@ export const ROLES: RoleInfo[] = [
       'Pencairan dana pembayaran PO dan Upah (s/d Rp 100 Jt)',
       'Verifikasi kelengkapan dokumen penagihan'
     ],
-    financialAutomation: 'OTOMATIS menerima antrean tagihan dari PO disetujui dan SPK upah tervalidasi. Bagian Keuangan hanya perlu memeriksa rekening & memposting pencairan.'
+    financialAutomation: 'OTOMATIS menerima antrean tagihan dari PO disetujui dan SPK upah tervalidasi. Bagian Keuangan hanya perlu memeriksa rekening & memposting pencairan.',
+    quickActions: [
+      { label: 'Cairkan Antrean Tagihan PO Supplier', actionId: 'disburse_po', targetTab: 'keuangan', isUrgent: true },
+      { label: 'Bayar Upah Mandor (Net PPh 21)', actionId: 'disburse_wage', targetTab: 'keuangan', isUrgent: true },
+      { label: 'Input Penerimaan Termin Klien', actionId: 'record_term', targetTab: 'keuangan' },
+      { label: 'Rekapitulasi Pajak PPN & PPh Final', actionId: 'tax_recap', targetTab: 'keuangan' }
+    ]
   },
   {
     id: 'estimator',
@@ -140,6 +264,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Menghitung take-off volume, simulasi harga tender, analisa AHS PUPR, dan pembaruan database harga dasar.',
     allowedTabs: ['dashboard', 'ahs', 'rab', 'rap', 'laporan'],
+    defaultTab: 'ahs',
     canView: [
       'Seluruh master AHS PUPR & SNI beserta koefisien',
       'Riwayat harga beli material dari PO terdahulu',
@@ -153,7 +278,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Tidak memiliki wewenang approval transaksi'
     ],
-    financialAutomation: 'Perhitungan estimasi otomatis menjadi dasar penawaran RAB ke klien dan pembentukan RAP internal.'
+    financialAutomation: 'Perhitungan estimasi otomatis menjadi dasar penawaran RAB ke klien dan pembentukan RAP internal.',
+    quickActions: [
+      { label: 'Eksplorasi Koefisien AHS PUPR', actionId: 'inspect_ahs', targetTab: 'ahs' },
+      { label: 'Simulasi Margin Laba Tender', actionId: 'sim_margin', targetTab: 'rap' },
+      { label: 'Download Database AHS ke Excel', actionId: 'export_ahs', targetTab: 'ahs' }
+    ]
   },
   {
     id: 'procurement',
@@ -164,6 +294,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 250_000_000,
     description: 'Memproses SPB dari lapangan yang stoknya kurang, membandingkan penawaran vendor, menerbitkan PO, dan mengontrol jadwal pengiriman.',
     allowedTabs: ['dashboard', 'logistik', 'ahs', 'laporan'],
+    defaultTab: 'logistik',
     canView: [
       'Daftar SPB lapangan yang berstatus "Diteruskan ke PO"',
       'Data stok buffer kantor dan stok lapangan',
@@ -179,7 +310,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Rekomendasi pemilihan supplier (PO di-approve oleh PM/Direktur)'
     ],
-    financialAutomation: 'PO yang diterbitkan otomatis mengikat komitmen anggaran biaya material proyek dan diteruskan ke bagian keuangan setelah BAST penerimaan terbit.'
+    financialAutomation: 'PO yang diterbitkan otomatis mengikat komitmen anggaran biaya material proyek dan diteruskan ke bagian keuangan setelah BAST penerimaan terbit.',
+    quickActions: [
+      { label: 'Terbitkan PO Supplier Baru', actionId: 'create_po', targetTab: 'logistik', isUrgent: true },
+      { label: 'Proses SPB Kebutuhan Material', actionId: 'process_spb', targetTab: 'logistik' },
+      { label: 'Monitor Jadwal Pengiriman Vendor', actionId: 'vendor_delivery', targetTab: 'logistik' }
+    ]
   },
   {
     id: 'logistik_kantor',
@@ -190,6 +326,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 50_000_000,
     description: 'Mengelola buffer stok gudang pusat kantor, memproses pemenuhan SPB proyek via Surat Jalan transfer, dan penerimaan retur.',
     allowedTabs: ['dashboard', 'logistik', 'laporan'],
+    defaultTab: 'logistik',
     canView: [
       'Stok fisik gudang kantor pusat dan ambang batas minimum',
       'Permintaan material dari berbagai proyek aktif',
@@ -204,7 +341,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Disposisi pengeluaran stok kantor untuk dikirim ke lapangan'
     ],
-    financialAutomation: 'Transfer material dari kantor ke lapangan tidak langsung menjadi beban realisasi pekerjaan sampai material tersebut dicatat pemakaiannya per item WBS oleh tim lapangan.'
+    financialAutomation: 'Transfer material dari kantor ke lapangan tidak langsung menjadi beban realisasi pekerjaan sampai material tersebut dicatat pemakaiannya per item WBS oleh tim lapangan.',
+    quickActions: [
+      { label: 'Kirim Stok Kantor via Surat Jalan', actionId: 'transfer_stock', targetTab: 'logistik' },
+      { label: 'Cek Ambang Minimum Buffer Kantor', actionId: 'check_office_stock', targetTab: 'logistik' },
+      { label: 'Laporan Mutasi Barang Pusat', actionId: 'stock_mutation', targetTab: 'logistik' }
+    ]
   },
   {
     id: 'pm_lapangan',
@@ -215,6 +357,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 150_000_000,
     description: 'Memimpin koordinasi operasional site, memvalidasi klaim progres mingguan mandor, dan menyetujui pengajuan mendesak di lapangan.',
     allowedTabs: ['dashboard', 'progres', 'logistik', 'upah', 'laporan'],
+    defaultTab: 'progres',
     canView: [
       'Kondisi lapangan, cuaca, absensi tenaga kerja',
       'S-Curve proyek dan deviasi progres mingguan',
@@ -230,7 +373,12 @@ export const ROLES: RoleInfo[] = [
       'Klaim upah mandor mingguan (s/d Rp 150 Jt)',
       'Laporan Harian Proyek (LHR)'
     ],
-    financialAutomation: 'Persetujuan PM Lapangan mengesahkan volume opname yang menjadi acuan resmi pencairan upah mandor.'
+    financialAutomation: 'Persetujuan PM Lapangan mengesahkan volume opname yang menjadi acuan resmi pencairan upah mandor.',
+    quickActions: [
+      { label: 'Approval SPB Mendesak Site', actionId: 'approve_spb_site', targetTab: 'logistik', isUrgent: true },
+      { label: 'Sahkan Opname Fisik Bersama Klien', actionId: 'opname_approval', targetTab: 'upah' },
+      { label: 'Instruksi Percepatan Schedule', actionId: 'schedule_mitigation', targetTab: 'progres' }
+    ]
   },
   {
     id: 'site_manager',
@@ -241,6 +389,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 75_000_000,
     description: 'Mengatur schedule harian, mengawasi mutu beton/pembesian, memeriksa laporan harian, dan memverifikasi klaim upah awal.',
     allowedTabs: ['dashboard', 'progres', 'logistik', 'upah', 'ahs'],
+    defaultTab: 'upah',
     canView: [
       'Schedule pelaksanaan harian dan target volume',
       'Laporan harian yang dikirim pelaksana lapangan',
@@ -257,7 +406,12 @@ export const ROLES: RoleInfo[] = [
       'Verifikasi awal klaim upah mandor sebelum diajukan ke PM',
       'Review Laporan Harian (LHR)'
     ],
-    financialAutomation: 'Hasil opname yang diverifikasi SM menjadi dasar perhitungan tagihan upah borongan.'
+    financialAutomation: 'Hasil opname yang diverifikasi SM menjadi dasar perhitungan tagihan upah borongan.',
+    quickActions: [
+      { label: 'Verifikasi Awal Opname Mandor', actionId: 'verify_wage_sm', targetTab: 'upah', isUrgent: true },
+      { label: 'Verifikasi Kebutuhan SPB Semen/Besi', actionId: 'verify_spb_sm', targetTab: 'logistik', isUrgent: true },
+      { label: 'Review & Checklist Mutu LHR', actionId: 'review_lhr', targetTab: 'progres' }
+    ]
   },
   {
     id: 'pelaksana',
@@ -268,6 +422,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Input progres fisik harian via mobile/desktop, mengajukan kebutuhan material (SPB), dan mencatat pemakaian material.',
     allowedTabs: ['dashboard', 'progres', 'logistik', 'upah'],
+    defaultTab: 'progres',
     canView: [
       'Daftar item pekerjaan WBS di zona penugasannya',
       'Sisa stok material di gudang lapangan',
@@ -283,7 +438,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Tidak memiliki wewenang approval (Hanya input & pengajuan lapangan)'
     ],
-    financialAutomation: 'Input pemakaian material oleh pelaksana otomatis menambah realisasi biaya material pada RAP item pekerjaan terkait.'
+    financialAutomation: 'Input pemakaian material oleh pelaksana otomatis menambah realisasi biaya material pada RAP item pekerjaan terkait.',
+    quickActions: [
+      { label: 'Buka Mode Pendamping Lapangan (Mobile)', actionId: 'open_mobile', targetTab: 'progres', isUrgent: true },
+      { label: 'Input Capaian Cor Hari Ini (LHR)', actionId: 'input_lhr', targetTab: 'progres' },
+      { label: 'Kirim SPB Bahan Mendesak', actionId: 'create_spb', targetTab: 'logistik' }
+    ]
   },
   {
     id: 'admin_lapangan',
@@ -294,6 +454,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Mencatat absensi mandor/tukang harian (mandays), input rekap administrasi lapangan, dan pengarsipan bukti fisik.',
     allowedTabs: ['dashboard', 'progres', 'upah', 'logistik'],
+    defaultTab: 'upah',
     canView: [
       'Data absensi pekerja dan mandor',
       'Daftar surat jalan penerimaan barang di site',
@@ -307,7 +468,11 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Tidak memiliki wewenang approval'
     ],
-    financialAutomation: 'Absensi mandays yang diinput otomatis menghitung nilai upah kotor (mandays x tarif) dan potongan PPh 21 (2%).'
+    financialAutomation: 'Absensi mandays yang diinput otomatis menghitung nilai upah kotor (mandays x tarif) dan potongan PPh 21 (2%).',
+    quickActions: [
+      { label: 'Input Absensi Mandays Harian', actionId: 'input_mandays', targetTab: 'upah', isUrgent: true },
+      { label: 'Rekap Kas Kecil Operasional Site', actionId: 'petty_cash_site', targetTab: 'upah' }
+    ]
   },
   {
     id: 'logistik_lapangan',
@@ -318,6 +483,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Menerima dan memeriksa material masuk di lokasi proyek (BAST), mencatat pemakaian per item WBS, dan melaporkan stok menipis.',
     allowedTabs: ['dashboard', 'logistik'],
+    defaultTab: 'logistik',
     canView: [
       'Stok real-time gudang lapangan proyek',
       'Daftar PO yang ditujukan langsung ke lokasi proyek',
@@ -332,7 +498,12 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Tanda terima barang (BAST Lapangan)'
     ],
-    financialAutomation: 'Penerimaan BAST oleh logistik lapangan memicu status PO menjadi "Diterima Lengkap" sehingga siap ditagihkan/dibayarkan oleh Keuangan.'
+    financialAutomation: 'Penerimaan BAST oleh logistik lapangan memicu status PO menjadi "Diterima Lengkap" sehingga siap ditagihkan/dibayarkan oleh Keuangan.',
+    quickActions: [
+      { label: 'Input BAST Penerimaan Barang Fisik', actionId: 'receive_goods', targetTab: 'logistik', isUrgent: true },
+      { label: 'Catat Pengeluaran Material ke WBS', actionId: 'record_usage', targetTab: 'logistik' },
+      { label: 'Peringatan Buffer Semen Menipis', actionId: 'warn_buffer', targetTab: 'logistik' }
+    ]
   },
   {
     id: 'k3_lapangan',
@@ -343,6 +514,7 @@ export const ROLES: RoleInfo[] = [
     approvalLimit: 0,
     description: 'Inspeksi keselamatan kerja, patroli APD, tool box meeting, identifikasi bahaya, dan investigasi insiden kerja.',
     allowedTabs: ['dashboard', 'progres', 'laporan'],
+    defaultTab: 'progres',
     canView: [
       'Data keselamatan kerja dan checklist K3',
       'Jumlah pekerja aktif di lapangan per hari',
@@ -356,7 +528,11 @@ export const ROLES: RoleInfo[] = [
     canApproveItems: [
       'Izin kerja risiko tinggi (Work Permit pengecoran/ketinggian)'
     ],
-    financialAutomation: 'Kebutuhan APD dan safety sign diajukan melalui SPB ke logistik.'
+    financialAutomation: 'Kebutuhan APD dan safety sign diajukan melalui SPB ke logistik.',
+    quickActions: [
+      { label: 'Checklist K3 & Patroli APD Pagi', actionId: 'k3_inspection', targetTab: 'progres' },
+      { label: 'Pengajuan Tambahan APD & Rambu', actionId: 'request_safety', targetTab: 'logistik' }
+    ]
   }
 ];
 
@@ -491,6 +667,7 @@ export const INITIAL_PROJECTS: Project[] = [
     location: 'Kav. 45 Jl. Jend. Sudirman, Jakarta Pusat',
     contractValue: 18_500_000_000,
     currency: 'IDR',
+    defaultTargetProfitPercent: 25.0,
     targetProfitPercent: 18.0,
     targetProfitNominal: 3_330_000_000,
     startDate: '2026-01-15',
@@ -523,6 +700,7 @@ export const INITIAL_PROJECTS: Project[] = [
     location: 'Kawasan Industri GIIC Blok AD, Cikarang Pusat, Bekasi',
     contractValue: 24_200_000_000,
     currency: 'IDR',
+    defaultTargetProfitPercent: 25.0,
     targetProfitPercent: 16.5,
     targetProfitNominal: 3_993_000_000,
     startDate: '2026-02-01',
@@ -555,6 +733,7 @@ export const INITIAL_PROJECTS: Project[] = [
     location: 'Sentul City Hills Sector 7, Bogor',
     contractValue: 9_200_000_000,
     currency: 'IDR',
+    defaultTargetProfitPercent: 25.0,
     targetProfitPercent: 21.0,
     targetProfitNominal: 1_932_000_000,
     startDate: '2026-03-01',
@@ -769,6 +948,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 827750000,
     ahsCode: 'A.4.1.1.25',
     hasAhsMapped: true,
+    targetProfitPercent: 22.75, // Manual override
     status: 'disetujui'
   },
   {
@@ -783,6 +963,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 1188250000,
     ahsCode: 'A.4.1.1.17',
     hasAhsMapped: true,
+    targetProfitPercent: 20.47, // Manual override
     status: 'disetujui'
   },
   {
@@ -797,6 +978,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 477400000,
     ahsCode: 'A.4.1.1.21',
     hasAhsMapped: true,
+    targetProfitPercent: 14.05, // Manual override
     status: 'disetujui'
   },
   {
@@ -811,6 +993,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 3095600000,
     ahsCode: 'A.4.1.1.25',
     hasAhsMapped: true,
+    targetProfitPercent: 23.35, // Manual override
     status: 'disetujui'
   },
   {
@@ -825,6 +1008,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 4459000000,
     ahsCode: 'A.4.1.1.17',
     hasAhsMapped: true,
+    targetProfitPercent: 20.47, // Manual override
     status: 'disetujui'
   },
   {
@@ -839,6 +1023,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 2291000000,
     ahsCode: 'A.4.1.1.21',
     hasAhsMapped: true,
+    targetProfitPercent: null, // Menggunakan Project default (25.0%)
     status: 'disetujui'
   },
   {
@@ -853,6 +1038,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 1056000000,
     ahsCode: 'A.4.4.1.9',
     hasAhsMapped: true,
+    targetProfitPercent: 25.0, // Project default
     status: 'disetujui'
   },
   {
@@ -867,6 +1053,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 1728000000,
     ahsCode: 'A.4.4.2.4',
     hasAhsMapped: true,
+    targetProfitPercent: null, // Project default 25.0%
     status: 'disetujui'
   },
   {
@@ -881,6 +1068,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 632500000,
     ahsCode: 'A.4.7.1.10',
     hasAhsMapped: true,
+    targetProfitPercent: 30.0, // Manual override
     status: 'disetujui'
   },
   {
@@ -895,6 +1083,7 @@ export const INITIAL_RAB_ITEMS: RABItem[] = [
     totalPrice: 1450000000,
     ahsCode: undefined, // Belum terhubung AHS (Specialist / Subkon)
     hasAhsMapped: false,
+    targetProfitPercent: null,
     status: 'diperiksa'
   }
 ];
@@ -912,6 +1101,11 @@ export const INITIAL_RAP_ITEMS: RAPItem[] = [
     ahsCode: 'A.4.1.1.25',
     contractUnitPrice: 2150000,
     contractTotalPrice: 827750000,
+    rabUnitPrice: 2150000,
+    rabTotalPrice: 827750000,
+    targetProfitPercent: 22.75,
+    marginPercent: 22.75,
+    marginAmount: 188311200,
     budgetMaterialUnit: 1214365,
     budgetLaborUnit: 310265,
     budgetEquipmentUnit: 16250,
@@ -938,6 +1132,11 @@ export const INITIAL_RAP_ITEMS: RAPItem[] = [
     ahsCode: 'A.4.1.1.17',
     contractUnitPrice: 24500,
     contractTotalPrice: 1188250000,
+    rabUnitPrice: 24500,
+    rabTotalPrice: 1188250000,
+    targetProfitPercent: 20.47,
+    marginPercent: 20.47,
+    marginAmount: 243227500,
     budgetMaterialUnit: 15600,
     budgetLaborUnit: 2460,
     budgetEquipmentUnit: 225,
@@ -964,6 +1163,11 @@ export const INITIAL_RAP_ITEMS: RAPItem[] = [
     ahsCode: 'A.4.1.1.21',
     contractUnitPrice: 385000,
     contractTotalPrice: 477400000,
+    rabUnitPrice: 385000,
+    rabTotalPrice: 477400000,
+    targetProfitPercent: 14.05,
+    marginPercent: 14.05,
+    marginAmount: 67090200,
     budgetMaterialUnit: 191950,
     budgetLaborUnit: 113945,
     budgetEquipmentUnit: 0,
@@ -990,6 +1194,11 @@ export const INITIAL_RAP_ITEMS: RAPItem[] = [
     ahsCode: 'A.4.1.1.25',
     contractUnitPrice: 2180000,
     contractTotalPrice: 3095600000,
+    rabUnitPrice: 2180000,
+    rabTotalPrice: 3095600000,
+    targetProfitPercent: 23.35,
+    marginPercent: 23.35,
+    marginAmount: 722950400,
     budgetMaterialUnit: 1214365,
     budgetLaborUnit: 310265,
     budgetEquipmentUnit: 16250,
@@ -1016,6 +1225,11 @@ export const INITIAL_RAP_ITEMS: RAPItem[] = [
     ahsCode: 'A.4.1.1.17',
     contractUnitPrice: 24500,
     contractTotalPrice: 4459000000,
+    rabUnitPrice: 24500,
+    rabTotalPrice: 4459000000,
+    targetProfitPercent: 20.47,
+    marginPercent: 20.47,
+    marginAmount: 912730000,
     budgetMaterialUnit: 15600,
     budgetLaborUnit: 2460,
     budgetEquipmentUnit: 225,
@@ -1314,6 +1528,43 @@ export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
         subtotal: 185000000,
         receivedQty: 150
       }
+    ],
+    approvalHistory: [
+      { role: 'Procurement', action: 'Diterbitkan', date: '2026-10-10 11:00', notes: 'PO pengadaan beton cor batching plant' },
+      { role: 'Direktur Utama', action: 'Approval', date: '2026-10-10 14:30', notes: 'Disetujui untuk pengecoran lantai dasar' }
+    ]
+  },
+  {
+    id: 'po-3',
+    poNumber: 'PO-2026-005',
+    supplierId: 'sup-3',
+    supplierName: 'PT Krakatau Steel Distribution',
+    projectId: 'prj-1',
+    ptId: 'pt-1',
+    orderDate: '2026-10-21',
+    expectedDeliveryDate: '2026-10-26',
+    deliveryDestination: 'lokasi_proyek',
+    status: 'diajukan',
+    createdBy: 'Rangga Wijaya (Procurement)',
+    paymentTerms: 'Tempo 45 Hari (Bilyet Giro)',
+    subtotal: 558000000,
+    ppnPercent: 11,
+    ppnAmount: 61380000,
+    grandTotal: 619380000,
+    requiresDirectorApproval: true,
+    items: [
+      {
+        materialId: 'mat-5',
+        materialName: 'Besi Beton Ulir D16 BJTD-40 (12m)',
+        unit: 'batang',
+        qty: 2450,
+        unitPrice: 228000,
+        subtotal: 558000000,
+        receivedQty: 0
+      }
+    ],
+    approvalHistory: [
+      { role: 'Procurement', action: 'Pengajuan PO', date: '2026-10-21 10:15', notes: 'PO bernilai Rp 619,38 Jt melebihi batas limit PM (Rp 500 Jt), memerlukan otorisasi Direktur Utama.' }
     ]
   }
 ];
@@ -1531,10 +1782,10 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
     type: 'progress_delay',
-    title: 'Deviasi Progres Fisik Negatif (-3.3%)',
-    message: 'Progres fisik aktual 41.2% berbanding target rencana 44.5%. Terhambat cuaca hujan dan keterlambatan izin angkut trailer besi.',
+    title: 'Deviasi Jadwal Fisik Lapangan (-3.3%)',
+    message: 'Progres fisik aktual 41.2% berbanding target rencana 44.5%. Terhambat cuaca hujan sore dan persiapan bekisting lantai 2.',
     severity: 'warning',
-    assignedRoles: ['direktur', 'pm_teknik', 'site_manager', 'pelaksana'],
+    assignedRoles: ['site_manager', 'pelaksana', 'pm_lapangan', 'direktur'],
     actionLabel: 'Lihat Kurva S & Mitigasi',
     actionModule: 'progres',
     createdAt: '2026-10-20 18:00',
@@ -1545,14 +1796,14 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectId: 'prj-1',
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
-    type: 'unmapped_rab',
-    title: 'Item RAB IV.1 Belum Terhubung Master AHS',
-    message: 'Item Pekerjaan Lift Penumpang 1000kg (2 Unit) senilai Rp 1.450.000.000 belum memiliki analisa AHS atau subkon terverifikasi.',
-    severity: 'warning',
-    assignedRoles: ['admin_teknik', 'estimator', 'pm_teknik'],
-    actionLabel: 'Hubungkan AHS / Spesifikasi',
-    actionModule: 'rab',
-    createdAt: '2026-10-19 11:20',
+    type: 'profit_drop',
+    title: 'Deviasi Target Margin Laba Proyek (-1.8%)',
+    message: 'Margin proyek tertekan akibat kenaikan biaya material ready mix & fluktuasi subkon. Proyeksi margin turun dari 18.0% ke 16.2%.',
+    severity: 'critical',
+    assignedRoles: ['direktur', 'pm_teknik', 'estimator'],
+    actionLabel: 'Evaluasi Margin RAP',
+    actionModule: 'rap',
+    createdAt: '2026-10-21 08:00',
     status: 'open'
   },
   {
@@ -1560,14 +1811,74 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectId: 'prj-1',
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
+    type: 'po_delayed',
+    title: 'Otorisasi Direktur Diperlukan: PO Ready Mix (> Rp 500 Jt)',
+    message: 'PO-2026-005 senilai Rp 619.380.000 melampaui batas limit wewenang PM Teknik (Rp 500 Jt) dan memerlukan persetujuan Direktur.',
+    severity: 'critical',
+    assignedRoles: ['direktur'],
+    actionLabel: 'Otorisasi PO di Approval Center',
+    actionModule: 'logistik',
+    createdAt: '2026-10-21 09:30',
+    status: 'open'
+  },
+  {
+    id: 'wrn-5',
+    projectId: 'prj-1',
+    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
+    ptId: 'pt-1',
+    type: 'spb_pending',
+    title: 'SPB Semen & Besi Membutuhkan Verifikasi Level 1 Site Manager',
+    message: 'Surat Permintaan Bahan SPB-2026-001 (50 sak semen) dan SPB-2026-002 dari pelaksana menunggu verifikasi mutu & kuota lapangan.',
+    severity: 'warning',
+    assignedRoles: ['site_manager'],
+    actionLabel: 'Verifikasi SPB Lapangan',
+    actionModule: 'logistik',
+    createdAt: '2026-10-21 08:45',
+    status: 'open'
+  },
+  {
+    id: 'wrn-6',
+    projectId: 'prj-1',
+    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
+    ptId: 'pt-1',
     type: 'unverified_wage',
-    title: 'Klaim Upah Borongan Siap Dibayar (Rp 29.106.000)',
-    message: 'SPK-BORONG-2026-008 Mandor Sukarno telah diverifikasi Site Manager dan membutuhkan validasi PM Teknik & Keuangan.',
+    title: 'Klaim Upah Mandor Sukarno Siap Dibayar (Rp 29.106.000)',
+    message: 'Opname borongan pembesian telah diverifikasi Site Manager dan PM. Menunggu pencairan kas / transfer dari Keuangan.',
     severity: 'info',
-    assignedRoles: ['pm_teknik', 'admin_keuangan'],
+    assignedRoles: ['admin_keuangan', 'pm_teknik', 'direktur'],
     actionLabel: 'Periksa & Cairkan Upah',
     actionModule: 'upah',
     createdAt: '2026-10-21 09:10',
+    status: 'open'
+  },
+  {
+    id: 'wrn-7',
+    projectId: 'prj-1',
+    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
+    ptId: 'pt-1',
+    type: 'missing_daily_report',
+    title: 'Laporan Harian Lapangan (LHR) Belum Diserahkan',
+    message: 'Laporan harian kemarin (Hari ke-141) mencakup 42 pekerja dan volume pembesian tie beam belum di-submit oleh Pelaksana.',
+    severity: 'warning',
+    assignedRoles: ['pelaksana', 'admin_lapangan'],
+    actionLabel: 'Input Laporan Harian (LHR)',
+    actionModule: 'progres',
+    createdAt: '2026-10-21 07:00',
+    status: 'open'
+  },
+  {
+    id: 'wrn-8',
+    projectId: 'prj-1',
+    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
+    ptId: 'pt-1',
+    type: 'unmapped_rab',
+    title: 'Item RAB IV.1 Belum Terhubung Master AHS PUPR',
+    message: 'Item Pekerjaan Lift Penumpang 1000kg (2 Unit) belum memiliki pemetaan AHS atau analisa subkon spesialis.',
+    severity: 'warning',
+    assignedRoles: ['admin_teknik', 'estimator', 'pm_teknik'],
+    actionLabel: 'Hubungkan Master AHS',
+    actionModule: 'rab',
+    createdAt: '2026-10-19 11:20',
     status: 'open'
   }
 ];
@@ -1622,3 +1933,47 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     details: 'Menetapkan target margin laba proyek Gedung Sudirman sebesar 18.0% (Rp 3,33 Miliar)'
   }
 ];
+
+export const INITIAL_REVENUE_RECOGNITIONS: RevenueRecognition[] = [
+  {
+    id: 'rev-rec-1',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    periodYear: 2026,
+    periodMonth: 8,
+    recognitionNo: 'PSAK72-202608-0001',
+    contractValue: 18_500_000_000,
+    progressPercent: 15.0,
+    revenueToDate: 2_775_000_000,
+    revenueRecognized: 0,
+    revenueThisMonth: 2_775_000_000,
+    journalId: 'JV-PSAK72-202608-001',
+    status: 'POSTED',
+    postedAt: '2026-08-31 17:00:00',
+    postedById: 'usr-1',
+    notes: 'Pengakuan Pendapatan PSAK 72 Periode Agustus 2026 (Progres Fisik 15.0%)',
+    createdAt: '2026-08-31 17:00:00',
+    updatedAt: '2026-08-31 17:00:00'
+  },
+  {
+    id: 'rev-rec-2',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    periodYear: 2026,
+    periodMonth: 9,
+    recognitionNo: 'PSAK72-202609-0001',
+    contractValue: 18_500_000_000,
+    progressPercent: 28.0,
+    revenueToDate: 5_180_000_000,
+    revenueRecognized: 2_775_000_000,
+    revenueThisMonth: 2_405_000_000,
+    journalId: 'JV-PSAK72-202609-001',
+    status: 'POSTED',
+    postedAt: '2026-09-30 18:00:00',
+    postedById: 'usr-1',
+    notes: 'Pengakuan Pendapatan PSAK 72 Periode September 2026 (Progres Fisik 28.0%)',
+    createdAt: '2026-09-30 18:00:00',
+    updatedAt: '2026-09-30 18:00:00'
+  }
+];
+

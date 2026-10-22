@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { formatRupiah, exportStockToExcel, triggerPrintReport } from '../../../services/exportService';
 import { MaterialRequest, PurchaseOrder, StockItem } from '../../../types';
+import { formatRupiah, exportStockToExcel, triggerPrintReport } from '../../../services/exportService';
+import { MaterialControlView } from './MaterialControlView';
 import {
   Boxes,
   Truck,
@@ -17,7 +18,8 @@ import {
   Check,
   Plus,
   Download,
-  Printer
+  Printer,
+  Layers
 } from 'lucide-react';
 
 export const LogistikView: React.FC = () => {
@@ -38,7 +40,7 @@ export const LogistikView: React.FC = () => {
     activeRole
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'stok' | 'spb' | 'po' | 'penerimaan' | 'pemakaian'>('stok');
+  const [activeTab, setActiveTab] = useState<'kontrol_material' | 'stok' | 'spb' | 'po' | 'pemakaian'>('kontrol_material');
   
   // Modal states
   const [showSPBModal, setShowSPBModal] = useState(false);
@@ -265,10 +267,25 @@ export const LogistikView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200">
+      <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-1">
+        <button
+          onClick={() => setActiveTab('kontrol_material')}
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'kontrol_material'
+              ? 'border-indigo-600 text-indigo-700 bg-indigo-50/50'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Boxes className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Kontrol Material (RAP)</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 font-bold ml-1">
+            Batch 10
+          </span>
+        </button>
+
         <button
           onClick={() => setActiveTab('stok')}
-          className={`px-4 py-2 text-xs font-bold border-b-2 transition ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition shrink-0 ${
             activeTab === 'stok' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
@@ -277,7 +294,7 @@ export const LogistikView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('spb')}
-          className={`px-4 py-2 text-xs font-bold border-b-2 transition ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition shrink-0 ${
             activeTab === 'spb' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
@@ -286,7 +303,7 @@ export const LogistikView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('po')}
-          className={`px-4 py-2 text-xs font-bold border-b-2 transition ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition shrink-0 ${
             activeTab === 'po' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
@@ -295,13 +312,18 @@ export const LogistikView: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('pemakaian')}
-          className={`px-4 py-2 text-xs font-bold border-b-2 transition ${
+          className={`px-4 py-2.5 text-xs font-bold border-b-2 transition shrink-0 ${
             activeTab === 'pemakaian' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
           Kartu Stok & Riwayat Mutasi
         </button>
       </div>
+
+      {/* TAB: KONTROL MATERIAL DARI RAP (BATCH 10 FASE 2) */}
+      {activeTab === 'kontrol_material' && (
+        <MaterialControlView />
+      )}
 
       {/* TAB 1: DUAL WAREHOUSE STOCK TABLE */}
       {activeTab === 'stok' && (

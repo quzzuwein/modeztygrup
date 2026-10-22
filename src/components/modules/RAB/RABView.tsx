@@ -18,7 +18,12 @@ import {
   Plus,
   Check,
   X,
-  Printer
+  Printer,
+  Sliders,
+  DollarSign,
+  Lock,
+  Edit2,
+  Percent
 } from 'lucide-react';
 
 export const RABView: React.FC = () => {
@@ -30,7 +35,9 @@ export const RABView: React.FC = () => {
     importRABItems,
     updateRABItemStatus,
     mapRABtoAHS,
-    currentRoleInfo
+    currentRoleInfo,
+    activeRole,
+    updateRabItemTargetProfit
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'daftar' | 'import'>('daftar');
@@ -39,6 +46,15 @@ export const RABView: React.FC = () => {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [mappingModalItem, setMappingModalItem] = useState<RABItem | null>(null);
+
+  // Target Profit per item edit modal state
+  const [profitEditItem, setProfitEditItem] = useState<{
+    item: RABItem;
+    profitPercent: number;
+    useDefault: boolean;
+  } | null>(null);
+
+  const canViewFinancials = ['direktur', 'pm_teknik', 'pm_lapangan', 'estimator', 'admin_keuangan'].includes(activeRole);
 
   if (!currentProject) {
     return <div className="p-8 text-center text-slate-500">Pilih proyek terlebih dahulu.</div>;
@@ -59,6 +75,14 @@ export const RABView: React.FC = () => {
 
   const totalRABValue = projectRabItems.reduce((sum, item) => sum + item.totalPrice, 0);
   const mappedCount = projectRabItems.filter(r => r.hasAhsMapped).length;
+
+  const defaultProfit = currentProject.defaultTargetProfitPercent ?? 25.0;
+  const totalRabTargetCost = projectRabItems.reduce((sum, item) => {
+    const profit = item.targetProfitPercent != null ? item.targetProfitPercent : defaultProfit;
+    return sum + item.totalPrice * (1 - profit / 100);
+  }, 0);
+  const totalProjectedMargin = totalRABValue - totalRabTargetCost;
+  const avgMarginPercent = totalRABValue > 0 ? (totalProjectedMargin / totalRABValue) * 100 : defaultProfit;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -304,37 +328,78 @@ export const RABView: React.FC = () => {
           </div>
         </div>
 
-        {/* Summary Badges */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-100">
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium">Total Nilai RAB Kontrak</span>
-            <div className="text-base font-extrabold font-mono text-slate-900 mt-0.5">
-              {formatRupiah(totalRABValue)}
+        {/* Summary Badges with Confidentiality Check */}
+        {canViewFinancials ? (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-100">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-[11px] text-slate-500 font-medium">Total Nilai RAB Kontrak</span>
+              <div className="text-base font-extrabold font-mono text-slate-900 mt-0.5">
+                {formatRupiah(totalRABValue)}
+              </div>
+              <span className="text-[10px] text-slate-400">Pagu Kontrak Bersih</span>
             </div>
-          </div>
 
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium">Jumlah Item Pekerjaan</span>
-            <div className="text-base font-extrabold font-mono text-slate-900 mt-0.5">
-              {projectRabItems.length} Item
+            <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
+              <span className="text-[11px] text-emerald-800 font-medium">Target Profit Agregat</span>
+              <div className="text-base font-extrabold font-mono text-emerald-700 mt-0.5 flex items-center gap-1.5">
+                <span>{avgMarginPercent.toFixed(1)}%</span>
+                <span className="text-xs text-slate-500 font-normal">({formatRupiah(totalProjectedMargin)})</span>
+              </div>
+              <span className="text-[10px] text-emerald-700">Rata-rata Margin per Item</span>
             </div>
-          </div>
 
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium">Terhubung AHS PUPR</span>
-            <div className="text-base font-extrabold font-mono text-emerald-600 mt-0.5 flex items-center gap-1">
-              <span>{mappedCount}</span>
-              <span className="text-xs text-slate-400">/ {projectRabItems.length} ({projectRabItems.length > 0 ? Math.round((mappedCount / projectRabItems.length) * 100) : 0}%)</span>
+            <div className="bg-blue-50/70 p-3 rounded-lg border border-blue-200">
+              <span className="text-[11px] text-blue-800 font-medium">Plafon Target RAP</span>
+              <div className="text-base font-extrabold font-mono text-blue-800 mt-0.5">
+                {formatRupiah(totalRabTargetCost)}
+              </div>
+              <span className="text-[10px] text-blue-600">Maks. Real Belanja</span>
             </div>
-          </div>
 
-          <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-            <span className="text-[11px] text-slate-500 font-medium">Belum Dipetakan AHS</span>
-            <div className="text-base font-extrabold font-mono text-amber-600 mt-0.5">
-              {projectRabItems.length - mappedCount} Item
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-[11px] text-slate-500 font-medium">Terhubung AHS PUPR</span>
+              <div className="text-base font-extrabold font-mono text-amber-600 mt-0.5 flex items-center gap-1">
+                <span>{mappedCount}</span>
+                <span className="text-xs text-slate-400">/ {projectRabItems.length} ({projectRabItems.length > 0 ? Math.round((mappedCount / projectRabItems.length) * 100) : 0}%)</span>
+              </div>
+              <span className="text-[10px] text-slate-400">Standar Permen PUPR</span>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5 pt-4 border-t border-slate-100">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <span className="text-[11px] text-slate-500 font-medium">Item Pekerjaan Lapangan</span>
+              <div className="text-base font-extrabold font-mono text-slate-900 mt-0.5">
+                {projectRabItems.length} Item
+              </div>
+              <span className="text-[10px] text-slate-400">Total WBS Terdaftar</span>
+            </div>
+
+            <div className="bg-emerald-50/70 p-3 rounded-lg border border-emerald-200">
+              <span className="text-[11px] text-emerald-800 font-medium">Terhubung Standar AHS</span>
+              <div className="text-base font-extrabold font-mono text-emerald-700 mt-0.5">
+                {mappedCount} Item ({projectRabItems.length > 0 ? Math.round((mappedCount / projectRabItems.length) * 100) : 0}%)
+              </div>
+              <span className="text-[10px] text-emerald-700">Acuan Koefisien Bahan</span>
+            </div>
+
+            <div className="bg-amber-50/70 p-3 rounded-lg border border-amber-200">
+              <span className="text-[11px] text-amber-800 font-medium">Belum Dipetakan AHS</span>
+              <div className="text-base font-extrabold font-mono text-amber-700 mt-0.5">
+                {projectRabItems.length - mappedCount} Item
+              </div>
+              <span className="text-[10px] text-amber-700">Perlu Mapping Teknik</span>
+            </div>
+
+            <div className="bg-slate-100 p-3 rounded-lg border border-slate-200 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-slate-400" />
+              <div>
+                <span className="text-[11px] font-bold text-slate-700">Keuangan Rahasia</span>
+                <div className="text-[10px] text-slate-500">Nilai kontrak & margin diproteksi khusus Direksi & PM</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tabs Switcher */}
@@ -405,8 +470,26 @@ export const RABView: React.FC = () => {
                   <th className="p-3">Uraian Pekerjaan & Bagian</th>
                   <th className="p-3 text-right">Volume</th>
                   <th className="p-3 text-center">Satuan</th>
-                  <th className="p-3 text-right">Harga Satuan (Rp)</th>
-                  <th className="p-3 text-right">Total Kontrak (Rp)</th>
+                  {canViewFinancials ? (
+                    <>
+                      <th className="p-3 text-right">Harsat RAB (Rp)</th>
+                      <th className="p-3 text-right">Total RAB (Rp)</th>
+                      <th className="p-3 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <span>Target Profit</span>
+                          <Percent className="w-3 h-3 text-amber-600" />
+                        </div>
+                      </th>
+                      <th className="p-3 text-right text-blue-700">RAP Target (Rp)</th>
+                    </>
+                  ) : (
+                    <th className="p-3 text-center text-slate-400">
+                      <div className="flex items-center justify-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        <span>Nilai Finansial</span>
+                      </div>
+                    </th>
+                  )}
                   <th className="p-3">Analisa AHS PUPR</th>
                   <th className="p-3 text-center">Status</th>
                   <th className="p-3 text-center">Aksi</th>
@@ -415,74 +498,122 @@ export const RABView: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="p-8 text-center text-slate-400">
+                    <td colSpan={canViewFinancials ? 11 : 8} className="p-8 text-center text-slate-400">
                       Tidak ada item RAB yang cocok dengan pencarian.
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map(item => (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                      <td className="p-3 font-mono font-bold text-slate-600">{item.wbsCode}</td>
-                      <td className="p-3">
-                        <div className="font-bold text-slate-900">{item.description}</div>
-                        <div className="text-[10px] text-slate-400 uppercase tracking-tight">{item.section}</div>
-                      </td>
-                      <td className="p-3 text-right font-mono font-medium">{item.volume.toLocaleString('id-ID')}</td>
-                      <td className="p-3 text-center font-mono text-slate-500">{item.unit}</td>
-                      <td className="p-3 text-right font-mono">{formatRupiah(item.unitPrice)}</td>
-                      <td className="p-3 text-right font-mono font-bold text-slate-900">
-                        {formatRupiah(item.totalPrice)}
-                      </td>
-                      <td className="p-3">
-                        {item.hasAhsMapped && item.ahsCode ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-mono font-bold">
-                              {item.ahsCode}
-                            </span>
+                  filteredItems.map(item => {
+                    const defaultProfit = currentProject.defaultTargetProfitPercent ?? 25.0;
+                    const effectiveProfit = item.targetProfitPercent != null ? item.targetProfitPercent : defaultProfit;
+                    const isManual = item.targetProfitPercent != null;
+                    const rapTargetPrice = Math.round(item.totalPrice * (1 - effectiveProfit / 100));
+
+                    return (
+                      <tr key={item.id} className="hover:bg-slate-50/70 transition">
+                        <td className="p-3 font-mono font-bold text-slate-600">{item.wbsCode}</td>
+                        <td className="p-3">
+                          <div className="font-bold text-slate-900">{item.description}</div>
+                          <div className="text-[10px] text-slate-400 uppercase tracking-tight">{item.section}</div>
+                        </td>
+                        <td className="p-3 text-right font-mono font-medium">{item.volume.toLocaleString('id-ID')}</td>
+                        <td className="p-3 text-center font-mono text-slate-500">{item.unit}</td>
+                        {canViewFinancials ? (
+                          <>
+                            <td className="p-3 text-right font-mono">{formatRupiah(item.unitPrice)}</td>
+                            <td className="p-3 text-right font-mono font-bold text-slate-900">
+                              {formatRupiah(item.totalPrice)}
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="inline-flex items-center gap-1.5">
+                                <span className={`font-mono font-bold text-xs ${isManual ? 'text-amber-700' : 'text-slate-700'}`}>
+                                  {effectiveProfit}%
+                                </span>
+                                <span
+                                  className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
+                                    isManual
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                      : 'bg-slate-100 text-slate-500'
+                                  }`}
+                                  title={isManual ? 'Target profit khusus item ini' : `Mengikuti default proyek (${defaultProfit}%)`}
+                                >
+                                  {isManual ? 'Manual' : 'Default'}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    setProfitEditItem({
+                                      item,
+                                      profitPercent: effectiveProfit,
+                                      useDefault: !isManual
+                                    })
+                                  }
+                                  className="text-slate-400 hover:text-amber-600 p-0.5 rounded transition"
+                                  title="Ubah Target Profit Item"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </td>
+                            <td className="p-3 text-right font-mono font-bold text-blue-700">
+                              {formatRupiah(rapTargetPrice)}
+                            </td>
+                          </>
+                        ) : (
+                          <td className="p-3 text-center font-mono text-slate-400 text-[11px] italic">
+                            *** (Dirahasiakan)
+                          </td>
+                        )}
+                        <td className="p-3">
+                          {item.hasAhsMapped && item.ahsCode ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-mono font-bold">
+                                {item.ahsCode}
+                              </span>
+                              <button
+                                onClick={() => setMappingModalItem(item)}
+                                className="text-[10px] text-slate-400 hover:text-amber-600 underline"
+                                title="Ganti AHS"
+                              >
+                                Ubah
+                              </button>
+                            </div>
+                          ) : (
                             <button
                               onClick={() => setMappingModalItem(item)}
-                              className="text-[10px] text-slate-400 hover:text-amber-600 underline"
-                              title="Ganti AHS"
+                              className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-semibold flex items-center gap-1 transition"
                             >
-                              Ubah
+                              <Sparkles className="w-3 h-3 text-amber-600" />
+                              <span>Hubungkan AHS</span>
                             </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setMappingModalItem(item)}
-                            className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[10px] font-semibold flex items-center gap-1 transition"
+                          )}
+                        </td>
+                        <td className="p-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              item.status === 'disetujui'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : item.status === 'diperiksa'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-slate-100 text-slate-700'
+                            }`}
                           >
-                            <Sparkles className="w-3 h-3 text-amber-600" />
-                            <span>Hubungkan AHS</span>
-                          </button>
-                        )}
-                      </td>
-                      <td className="p-3 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            item.status === 'disetujui'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : item.status === 'diperiksa'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-slate-100 text-slate-700'
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-center">
-                        {currentRoleInfo.canApprove && item.status !== 'disetujui' && (
-                          <button
-                            onClick={() => updateRABItemStatus(item.id, 'disetujui')}
-                            className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
-                            title="Setujui Item RAB"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="p-3 text-center">
+                          {currentRoleInfo.canApprove && item.status !== 'disetujui' && (
+                            <button
+                              onClick={() => updateRABItemStatus(item.id, 'disetujui')}
+                              className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
+                              title="Setujui Item RAB"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -660,6 +791,160 @@ export const RABView: React.FC = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Atur Target Profit Per Item (Batch 9.75) */}
+      {profitEditItem && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 space-y-4">
+            <div className="flex items-start justify-between border-b border-slate-100 pb-3">
+              <div>
+                <div className="flex items-center gap-2 text-amber-600 text-xs font-bold">
+                  <Percent className="w-4 h-4" />
+                  <span>PROKON Target Profit Per Item (Batch 9.75)</span>
+                </div>
+                <h3 className="font-extrabold text-slate-900 text-base mt-1">
+                  Atur Target Margin Item RAB
+                </h3>
+                <p className="text-xs text-slate-500">
+                  {profitEditItem.item.wbsCode} - {profitEditItem.item.description}
+                </p>
+              </div>
+              <button
+                onClick={() => setProfitEditItem(null)}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Checkbox: Use Default */}
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-800">
+                <input
+                  type="checkbox"
+                  checked={profitEditItem.useDefault}
+                  onChange={e => {
+                    const isChecked = e.target.checked;
+                    setProfitEditItem({
+                      ...profitEditItem,
+                      useDefault: isChecked,
+                      profitPercent: isChecked ? defaultProfit : profitEditItem.profitPercent
+                    });
+                  }}
+                  className="rounded text-amber-500 focus:ring-amber-500 w-4 h-4"
+                />
+                <span>Gunakan Target Default Proyek ({defaultProfit}%)</span>
+              </label>
+
+              {!profitEditItem.useDefault && (
+                <div className="space-y-1 pt-1 border-t border-slate-200">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700">Target Profit Khusus Item Ini:</span>
+                    <span className="font-mono font-bold text-amber-700 text-sm">
+                      {profitEditItem.profitPercent}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="60"
+                      step="0.5"
+                      value={profitEditItem.profitPercent}
+                      onChange={e =>
+                        setProfitEditItem({
+                          ...profitEditItem,
+                          profitPercent: parseFloat(e.target.value) || 0
+                        })
+                      }
+                      className="w-full accent-amber-500"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max="90"
+                      step="0.5"
+                      value={profitEditItem.profitPercent}
+                      onChange={e =>
+                        setProfitEditItem({
+                          ...profitEditItem,
+                          profitPercent: Math.max(0, Math.min(90, parseFloat(e.target.value) || 0))
+                        })
+                      }
+                      className="w-16 p-1 border border-slate-300 rounded font-mono font-bold text-center text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Live Calculation Preview */}
+            <div className="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/30 text-xs space-y-2">
+              <div className="font-bold text-amber-900 flex items-center justify-between">
+                <span>Simulasi Anggaran RAP Item:</span>
+                <span className="font-mono text-amber-800">
+                  Vol: {profitEditItem.item.volume} {profitEditItem.item.unit}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div>
+                  <span className="text-slate-500">Nilai RAB Item:</span>
+                  <div className="font-mono font-bold text-slate-800">
+                    {formatRupiah(profitEditItem.item.totalPrice)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-500">Target Profit (Rp):</span>
+                  <div className="font-mono font-bold text-emerald-700">
+                    {formatRupiah(
+                      Math.round(
+                        profitEditItem.item.totalPrice * (profitEditItem.profitPercent / 100)
+                      )
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2 pt-1 border-t border-amber-200">
+                  <span className="text-slate-600 font-semibold">RAP Target Belanja Bersih:</span>
+                  <div className="font-mono font-extrabold text-sm text-blue-900">
+                    {formatRupiah(
+                      Math.round(
+                        profitEditItem.item.totalPrice * (1 - profitEditItem.profitPercent / 100)
+                      )
+                    )}
+                  </div>
+                  <span className="text-[10px] text-slate-500 italic">
+                    Rumus: RAB Total × (1 − {profitEditItem.profitPercent}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setProfitEditItem(null)}
+                className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  updateRabItemTargetProfit(
+                    profitEditItem.item.id,
+                    profitEditItem.useDefault ? null : profitEditItem.profitPercent
+                  );
+                  setProfitEditItem(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow transition"
+              >
+                Simpan Target Profit
+              </button>
             </div>
           </div>
         </div>

@@ -22,12 +22,18 @@ import { MobileLapanganView } from './components/modules/MobileLapangan/MobileLa
 
 import { RoleMatrixModal } from './components/common/RoleMatrixModal';
 import { AddEntityModal } from './components/common/AddEntityModal';
+import { ApprovalCenterModal } from './components/common/ApprovalCenterModal';
+import { RoleLimitConfigModal } from './components/common/RoleLimitConfigModal';
+import { UserManagementModal } from './components/common/UserManagementModal';
 
 const MainLayout: React.FC = () => {
-  const { isMobileFieldMode } = useApp();
+  const { isMobileFieldMode, currentRoleInfo, switchRoleAndGetDefaultTab } = useApp();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isWarningDrawerOpen, setIsWarningDrawerOpen] = useState(false);
   const [isMatrixModalOpen, setIsMatrixModalOpen] = useState(false);
+  const [isApprovalCenterOpen, setIsApprovalCenterOpen] = useState(false);
+  const [isRoleLimitConfigOpen, setIsRoleLimitConfigOpen] = useState(false);
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [addEntityModal, setAddEntityModal] = useState<{ isOpen: boolean; mode: 'pt' | 'project' }>({
     isOpen: false,
     mode: 'project'
@@ -39,6 +45,13 @@ const MainLayout: React.FC = () => {
         onOpenWarnings={() => setIsWarningDrawerOpen(true)}
         onOpenRoleMatrix={() => setIsMatrixModalOpen(true)}
         onOpenAddEntity={(mode) => setAddEntityModal({ isOpen: true, mode })}
+        onOpenApprovalCenter={() => setIsApprovalCenterOpen(true)}
+        onOpenRoleLimitConfig={() => setIsRoleLimitConfigOpen(true)}
+        onOpenUserManagement={() => setIsUserManagementOpen(true)}
+        onRoleChange={(newRole) => {
+          const targetTab = switchRoleAndGetDefaultTab(newRole);
+          setActiveTab(targetTab as ActiveTab);
+        }}
       />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
@@ -98,6 +111,32 @@ const MainLayout: React.FC = () => {
         isOpen={addEntityModal.isOpen}
         initialMode={addEntityModal.mode}
         onClose={() => setAddEntityModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Multi-Tier Approval Center Modal */}
+      <ApprovalCenterModal
+        isOpen={isApprovalCenterOpen}
+        onClose={() => setIsApprovalCenterOpen(false)}
+        onNavigateTab={tab => {
+          setActiveTab(tab);
+          setIsApprovalCenterOpen(false);
+        }}
+      />
+
+      {/* Direktur Nominal Limit Config Modal */}
+      <RoleLimitConfigModal
+        isOpen={isRoleLimitConfigOpen}
+        onClose={() => setIsRoleLimitConfigOpen(false)}
+      />
+
+      {/* Super Admin User Management & Access Lock Modal */}
+      <UserManagementModal
+        isOpen={isUserManagementOpen}
+        onClose={() => setIsUserManagementOpen(false)}
+        onOpenLimitConfig={() => {
+          setIsUserManagementOpen(false);
+          setIsRoleLimitConfigOpen(true);
+        }}
       />
     </div>
   );

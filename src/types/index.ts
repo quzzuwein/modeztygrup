@@ -13,6 +13,26 @@ export type UserRole =
   | 'logistik_lapangan'
   | 'k3_lapangan';
 
+export type ActiveTab =
+  | 'dashboard'
+  | 'ahs'
+  | 'rab'
+  | 'rap'
+  | 'logistik'
+  | 'upah'
+  | 'progres'
+  | 'keuangan'
+  | 'laporan'
+  | 'audit';
+
+export interface RoleQuickAction {
+  label: string;
+  actionId: string;
+  targetTab: ActiveTab;
+  description?: string;
+  isUrgent?: boolean;
+}
+
 export interface RoleInfo {
   id: UserRole;
   title: string;
@@ -21,11 +41,35 @@ export interface RoleInfo {
   canApprove: boolean;
   approvalLimit: number; // in IDR
   description: string;
-  allowedTabs: string[];
+  allowedTabs: ActiveTab[];
+  defaultTab: ActiveTab;
   canView: string[];
   canInput: string[];
   canApproveItems: string[];
   financialAutomation: string;
+  quickActions: RoleQuickAction[];
+}
+
+export interface AppUser {
+  id: string;
+  fullName: string;
+  email: string;
+  phone?: string;
+  assignedRole: UserRole;
+  companyId: string; // PT ID
+  projectId?: string; // Proyek penugasan
+  isActive: boolean;
+  isSuperAdmin?: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export interface MasterAdminSettings {
+  ownerName: string;
+  ownerEmail: string;
+  isSecurityLocked: boolean; // Jika true, role-switching dikunci dan butuh otorisasi admin
+  adminPin: string;
+  systemName: string;
 }
 
 export type ClientType = 'SWASTA' | 'PEMERINTAH' | 'BUMN' | 'PERORANGAN' | 'LAINNYA';
@@ -72,7 +116,8 @@ export interface Project {
   location: string;
   contractValue: number; // IDR
   currency?: string; // default "IDR"
-  targetProfitPercent: number; // e.g., 18%
+  defaultTargetProfitPercent?: number; // Default 25.0% - Basis penentuan RAP otomatis
+  targetProfitPercent: number; // e.g., 18% or 25%
   targetProfitNominal: number; // IDR
   startDate: string;
   endDate: string;
@@ -90,9 +135,91 @@ export interface Project {
   ppnEnabled?: boolean;
   ppnPercent?: number; // 11%
   pphFinalEnabled?: boolean;
-  pphFinalPercent?: number; // 1.75%, 2.65%, 4% (PP 9/2022)
+  pphFinalType?: 'NON_KUALIFIKASI' | 'KECIL' | 'MENENGAH' | 'BUMDES_TRANSISI' | 'BUMDES_UMUM';
+  pphFinalPercent?: number; // 1.75%, 2.65%, 4%, 0.5% (PP 9/2022 & PP 20/2026)
   taxNotes?: string;
 }
+
+export interface RevenueRecognition {
+  id: string;
+  companyId: string;
+  projectId: string;
+  periodYear: number;
+  periodMonth: number;
+  recognitionNo: string; // PSAK72-YYYYMM-####
+  contractValue: number;
+  progressPercent: number;
+  revenueToDate: number;
+  revenueRecognized: number; // sudah diakui s/d bulan lalu
+  revenueThisMonth: number;
+  journalId?: string;
+  status: 'DRAFT' | 'POSTED' | 'REVERSED';
+  postedAt?: string;
+  postedById?: string;
+  reversedAt?: string;
+  reversedById?: string;
+  reverseReason?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MaterialControlStatus = 'AMAN' | 'KURANG' | 'BERLEBIH' | 'BELUM_DIPESAN';
+
+export interface MaterialControlItem {
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  kebutuhanRap: number;
+  dipesan: number;
+  diterima: number;
+  dipakai: number;
+  sisaStok: number;
+  status: MaterialControlStatus;
+  warning?: string | null;
+  warningSeverity?: 'HIGH' | 'MEDIUM' | null;
+  nilaiKebutuhan: number;
+  nilaiDipesan: number;
+  rapSourceItems: {
+    rapItemId: string;
+    wbsCode: string;
+    description: string;
+    volume: number;
+    unit: string;
+    coef: number;
+    neededQty: number;
+  }[];
+  poItemsList: {
+    poNumber: string;
+    supplierName: string;
+    orderDate: string;
+    qty: number;
+    unitPrice: number;
+    status: string;
+  }[];
+  consumptionList: {
+    date: string;
+    refDoc: string;
+    qty: number;
+    wbsDesc?: string;
+    user: string;
+  }[];
+}
+
+export interface MaterialControlSummary {
+  projectId: string;
+  projectName: string;
+  totalMaterial: number;
+  kurangCount: number;
+  amanCount: number;
+  berlebihCount: number;
+  belumDipesanCount: number;
+  totalNilaiKebutuhan: number;
+  totalNilaiDipesan: number;
+  items: MaterialControlItem[];
+}
+
 
 export interface MaterialComponent {
   materialId: string;
@@ -151,6 +278,7 @@ export interface RABItem {
   totalPrice: number;
   ahsCode?: string; // Mapped AHS
   hasAhsMapped: boolean;
+  targetProfitPercent?: number | null; // e.g. 30%, null = pakai Project defaultTargetProfitPercent (default 25%)
   status: 'draft' | 'diperiksa' | 'disetujui' | 'revisi';
   notes?: string;
 }
@@ -168,6 +296,13 @@ export interface RAPItem {
   contractUnitPrice: number;
   contractTotalPrice: number;
   
+  // Snapshots from RAB Item & Margin Konsep Batch 10
+  rabUnitPrice?: number; // Snapshot harga satuan RAB
+  rabTotalPrice?: number; // Snapshot total harga RAB
+  targetProfitPercent?: number; // Target profit snapshot (%)
+  marginPercent?: number; // Realized margin %
+  marginAmount?: number; // Margin nominal Rp (RAB - RAP)
+
   // RAP Internal Cost breakdown
   budgetMaterialUnit: number;
   budgetLaborUnit: number;
@@ -186,6 +321,36 @@ export interface RAPItem {
   projectedProfitPercent: number;
   status: 'draft' | 'diperiksa' | 'disetujui' | 'revisi';
 }
+
+export interface RAPMarginPreviewItem {
+  rabItemId: string;
+  code: string;
+  name: string;
+  volume: number;
+  unit: string;
+  rabUnitPrice: number;
+  rabTotalPrice: number;
+  targetProfitPercent: number;
+  targetUnitCost: number;
+  targetTotalCost: number;
+  marginPercent: number;
+  marginAmount: number;
+  source: 'MANUAL' | 'PROJECT_DEFAULT';
+  status: 'SEHAT' | 'TERTEKAN' | 'RUGI';
+}
+
+export interface RAPMarginPreviewSummary {
+  rabTotal: number;
+  rapTotal: number;
+  marginAmount: number;
+  marginPercent: number;
+  targetProfitAvgPercent: number;
+  itemsAboveTarget: number;
+  itemsAtTarget: number;
+  itemsBelowTarget: number;
+  items: RAPMarginPreviewItem[];
+}
+
 
 export interface MaterialRequestItem {
   materialId: string;
@@ -209,8 +374,11 @@ export interface MaterialRequest {
   requiredDate: string;
   wbsSection: string;
   urgency: 'normal' | 'urgent';
-  status: 'draft' | 'diajukan' | 'disetujui' | 'diproses_gudang' | 'diteruskan_po' | 'terpenuhi' | 'ditolak';
+  status: 'draft' | 'diajukan' | 'diverifikasi_sm' | 'disetujui' | 'diproses_gudang' | 'diteruskan_po' | 'terpenuhi' | 'ditolak';
   items: MaterialRequestItem[];
+  estimatedTotal?: number;
+  rejectionReason?: string;
+  currentApprovalLevel?: number; // 1 = SM, 2 = PM, 3 = Direktur
   approvalHistory: {
     role: string;
     action: string;
@@ -245,10 +413,18 @@ export interface PurchaseOrder {
   ppnPercent: number; // 11%
   ppnAmount: number;
   grandTotal: number;
-  status: 'draft' | 'disetujui' | 'dikirim_supplier' | 'diterima_sebagian' | 'diterima_lengkap' | 'lunas' | 'dibatalkan';
+  status: 'draft' | 'diajukan' | 'diverifikasi_pm' | 'disetujui' | 'dikirim_supplier' | 'diterima_sebagian' | 'diterima_lengkap' | 'lunas' | 'ditolak' | 'dibatalkan';
   createdBy: string;
   approvedBy?: string;
   paymentTerms: string; // e.g. "Net 30"
+  rejectionReason?: string;
+  requiresDirectorApproval?: boolean;
+  approvalHistory?: {
+    role: string;
+    action: string;
+    date: string;
+    notes: string;
+  }[];
 }
 
 export interface StockItem {
@@ -308,11 +484,18 @@ export interface WageRecord {
   pph21Amount: number;
   netPayable: number;
   
-  status: 'diajukan' | 'diverifikasi_sm' | 'disetujui_pm' | 'siap_bayar' | 'lunas';
+  status: 'diajukan' | 'diverifikasi_sm' | 'disetujui_pm' | 'siap_bayar' | 'lunas' | 'ditolak';
   submittedBy: string;
   verifiedBy?: string;
+  rejectionReason?: string;
   paidDate?: string;
   paymentMethod?: 'Transfer Bank' | 'Kas Lapangan (Petty Cash)';
+  approvalHistory?: {
+    role: string;
+    action: string;
+    date: string;
+    notes: string;
+  }[];
 }
 
 export interface DailyReport {
@@ -391,6 +574,7 @@ export interface FinancialEntry {
     pphFinalRate?: number; // 1.75%, 2.65%, 4%
     pphFinalAmount?: number;
   };
+  isTaxable?: boolean; // Transaksi resmi fiskal DJP
   status: 'diverifikasi' | 'pending' | 'selesai';
 }
 

@@ -1,0 +1,6 @@
+{
+  "summary":  "Rencana implementasi penguatan sistem hak akses 12 role pada KontraktorPro:\n1. Alur Persetujuan Bertingkat & Validasi Limit Nominal (Level 1 SM -> Level 2 PM -> Level 3 Keuangan/Direktur) dengan catatan audit dan mitigasi penolakan.\n2. Dashboard & Workspace Adaptif Otomatis per Role (Auto-navigation, role-specific KPI cards, quick actions relevan, dan penyaringan menu sidebar strict).\n3. Integrasi status transaksi real-time antar role (Pelaksana -> Logistik/SM -> PM -> Keuangan -> Direktur).",
+  "updatedAt":  "2026-10-22T05:41:32.179416672Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

@@ -37,22 +37,35 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpenRoleMatrix }) => {
-  const { currentRoleInfo, warnings, activeRole, isMobileFieldMode, setIsMobileFieldMode } = useApp();
+  const {
+    currentRoleInfo,
+    warnings,
+    activeRole,
+    isMobileFieldMode,
+    setIsMobileFieldMode,
+    materialRequests,
+    purchaseOrders,
+    wageRecords
+  } = useApp();
   const [strictScope, setStrictScope] = useState(true);
 
   const relevantWarningsCount = warnings.filter(
     w => w.status === 'open' && (w.assignedRoles.includes(activeRole) || activeRole === 'direktur')
   ).length;
 
+  const pendingLogistikCount = materialRequests.filter(s => s.status === 'diajukan' || s.status === 'diverifikasi_sm').length;
+  const pendingUpahCount = wageRecords.filter(w => w.status === 'diajukan' || w.status === 'diverifikasi_sm').length;
+  const pendingKeuanganCount = wageRecords.filter(w => w.status === 'siap_bayar').length + purchaseOrders.filter(p => p.status === 'diterima_lengkap').length;
+
   const allMenuItems: { id: ActiveTab; label: string; icon: React.FC<{ className?: string }>; badge?: number; group: string }[] = [
     { id: 'dashboard', label: 'Dashboard & Warning', icon: LayoutDashboard, badge: relevantWarningsCount, group: 'Utama' },
     { id: 'ahs', label: 'Master AHS PUPR', icon: BookOpen, group: 'Teknik & Estimasi' },
     { id: 'rab', label: 'RAB & Import Excel AI', icon: FileSpreadsheet, group: 'Teknik & Estimasi' },
     { id: 'rap', label: 'RAP & Target Profit', icon: Calculator, group: 'Teknik & Estimasi' },
-    { id: 'logistik', label: 'Logistik & Gudang', icon: Boxes, group: 'Operasional Lapangan' },
-    { id: 'upah', label: 'Kontrol Upah & Mandor', icon: Users2, group: 'Operasional Lapangan' },
+    { id: 'logistik', label: 'Logistik & Gudang', icon: Boxes, badge: pendingLogistikCount > 0 ? pendingLogistikCount : undefined, group: 'Operasional Lapangan' },
+    { id: 'upah', label: 'Kontrol Upah & Mandor', icon: Users2, badge: pendingUpahCount > 0 ? pendingUpahCount : undefined, group: 'Operasional Lapangan' },
     { id: 'progres', label: 'Progres & Kurva S', icon: LineChart, group: 'Operasional Lapangan' },
-    { id: 'keuangan', label: 'Keuangan & Pajak', icon: BadgeDollarSign, group: 'Akuntansi & Keuangan' },
+    { id: 'keuangan', label: 'Keuangan & Pajak', icon: BadgeDollarSign, badge: pendingKeuanganCount > 0 ? pendingKeuanganCount : undefined, group: 'Akuntansi & Keuangan' },
     { id: 'laporan', label: 'Laporan & Ekspor', icon: FileText, group: 'Manajerial' },
     { id: 'audit', label: 'Audit Trail & Log', icon: History, group: 'Manajerial' }
   ];
@@ -84,19 +97,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onOpe
             <span>{strictScope ? 'Ketat' : 'Bebas'}</span>
           </button>
         </div>
-
         <div className="font-extrabold text-sm text-slate-800 leading-tight">
           {currentRoleInfo.title}
         </div>
         <div className="text-xs text-slate-500 mt-0.5">
           {currentRoleInfo.department}
         </div>
-
-        {strictScope && (
-          <div className="mt-2 text-[10px] bg-slate-200/80 text-slate-700 px-2 py-0.5 rounded font-medium inline-block">
-            Menu dibatasi ({menuItems.length} dari {allMenuItems.length} modul aktif)
-          </div>
-        )}
+        
+        {/* Approval limit badge */}
+        <div className="mt-2 text-[10px] font-mono font-bold bg-slate-200/80 text-slate-800 px-2 py-0.5 rounded flex items-center justify-between">
+          <span>Limit Approval:</span>
+          <span className={currentRoleInfo.canApprove ? 'text-emerald-700' : 'text-slate-500'}>
+            {currentRoleInfo.canApprove
+              ? currentRoleInfo.approvalLimit >= 1_000_000_000
+                ? `Rp ${(currentRoleInfo.approvalLimit / 1_000_000_000).toFixed(0)} M`
+                : `Rp ${(currentRoleInfo.approvalLimit / 1_000_000).toFixed(0)} Jt`
+              : 'Rp 0 (Draft)'}
+          </span>
+        </div>
 
         {/* View Matrix Button */}
         {onOpenRoleMatrix && (
