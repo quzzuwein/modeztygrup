@@ -1,0 +1,6 @@
+{
+  "name": "KontraktorPro - ERP Multi-PT & Konstruksi Terpadu",
+  "description": "Sistem ERP Manajemen Kontraktor Terintegrasi Multi-PT & Proyek: RAB, RAP, Master AHS PUPR, Logistik, Kontrol Upah, Progres Fisik vs Serapan Biaya, Keuangan & Pajak.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
