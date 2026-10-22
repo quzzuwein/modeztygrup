@@ -13,7 +13,10 @@ import {
   ArrowLeft,
   Wifi,
   Clock,
-  Sparkles
+  Sparkles,
+  Share2,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export const MobileLapanganView: React.FC = () => {
@@ -29,6 +32,13 @@ export const MobileLapanganView: React.FC = () => {
 
   const [activeScreen, setActiveScreen] = useState<'home' | 'progres' | 'spb' | 'stok'>('home');
   const [synced, setSynced] = useState(true);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText('https://ais-pre-6t63rqsp2bmb5tko33slkj-755317578717.asia-northeast1.run.app');
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   // Quick Progress form state
   const [selectedRabId, setSelectedRabId] = useState(rabItems[0]?.id || '');
@@ -133,13 +143,24 @@ export const MobileLapanganView: React.FC = () => {
             </span>
           </div>
 
-          <button
-            onClick={() => setIsMobileFieldMode(false)}
-            className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
-          >
-            <span>Tutup Mobile</span>
-            <ArrowLeft className="w-3 h-3" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopyLink}
+              className="text-[10px] bg-slate-800 hover:bg-slate-700 text-amber-300 px-2 py-1 rounded-md font-bold flex items-center gap-1 border border-slate-700 transition"
+              title="Salin Tautan Aplikasi"
+            >
+              {copiedLink ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              <span>{copiedLink ? 'Tersalin' : 'Salin Tautan'}</span>
+            </button>
+
+            <button
+              onClick={() => setIsMobileFieldMode(false)}
+              className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+            >
+              <span>Tutup Mobile</span>
+              <ArrowLeft className="w-3 h-3" />
+            </button>
+          </div>
         </div>
 
         {/* Project Header Card */}

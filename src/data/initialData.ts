@@ -114,6 +114,50 @@ export const INITIAL_USERS: AppUser[] = [
   }
 ];
 
+export const INITIAL_REVENUE_RECOGNITIONS: RevenueRecognition[] = [
+  {
+    id: 'rev-rec-1',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    periodYear: 2026,
+    periodMonth: 8,
+    recognitionNo: 'PSAK72-202608-0001',
+    contractValue: 18_500_000_000,
+    progressPercent: 15.0,
+    revenueToDate: 2_775_000_000,
+    revenueRecognized: 0,
+    revenueThisMonth: 2_775_000_000,
+    journalId: 'JV-PSAK72-202608-001',
+    status: 'POSTED',
+    postedAt: '2026-08-31 17:00:00',
+    postedById: 'usr-1',
+    notes: 'Pengakuan Pendapatan PSAK 72 Periode Agustus 2026 (Progres Fisik 15.0%)',
+    createdAt: '2026-08-31 17:00:00',
+    updatedAt: '2026-08-31 17:00:00'
+  },
+  {
+    id: 'rev-rec-2',
+    companyId: 'pt-1',
+    projectId: 'prj-1',
+    periodYear: 2026,
+    periodMonth: 9,
+    recognitionNo: 'PSAK72-202609-0001',
+    contractValue: 18_500_000_000,
+    progressPercent: 28.0,
+    revenueToDate: 5_180_000_000,
+    revenueRecognized: 2_775_000_000,
+    revenueThisMonth: 2_405_000_000,
+    journalId: 'JV-PSAK72-202609-001',
+    status: 'POSTED',
+    postedAt: '2026-09-30 18:00:00',
+    postedById: 'usr-1',
+    notes: 'Pengakuan Pendapatan PSAK 72 Periode September 2026 (Progres Fisik 28.0%)',
+    createdAt: '2026-09-30 18:00:00',
+    updatedAt: '2026-09-30 18:00:00'
+  }
+];
+
+
 export const ROLES: RoleInfo[] = [
   {
     id: 'direktur',
@@ -1782,10 +1826,10 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
     type: 'progress_delay',
-    title: 'Deviasi Jadwal Fisik Lapangan (-3.3%)',
-    message: 'Progres fisik aktual 41.2% berbanding target rencana 44.5%. Terhambat cuaca hujan sore dan persiapan bekisting lantai 2.',
+    title: 'Deviasi Progres Fisik Negatif (-3.3%)',
+    message: 'Progres fisik aktual 41.2% berbanding target rencana 44.5%. Terhambat cuaca hujan dan keterlambatan izin angkut trailer besi.',
     severity: 'warning',
-    assignedRoles: ['site_manager', 'pelaksana', 'pm_lapangan', 'direktur'],
+    assignedRoles: ['direktur', 'pm_teknik', 'site_manager', 'pelaksana'],
     actionLabel: 'Lihat Kurva S & Mitigasi',
     actionModule: 'progres',
     createdAt: '2026-10-20 18:00',
@@ -1796,14 +1840,14 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectId: 'prj-1',
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
-    type: 'profit_drop',
-    title: 'Deviasi Target Margin Laba Proyek (-1.8%)',
-    message: 'Margin proyek tertekan akibat kenaikan biaya material ready mix & fluktuasi subkon. Proyeksi margin turun dari 18.0% ke 16.2%.',
-    severity: 'critical',
-    assignedRoles: ['direktur', 'pm_teknik', 'estimator'],
-    actionLabel: 'Evaluasi Margin RAP',
-    actionModule: 'rap',
-    createdAt: '2026-10-21 08:00',
+    type: 'unmapped_rab',
+    title: 'Item RAB IV.1 Belum Terhubung Master AHS',
+    message: 'Item Pekerjaan Lift Penumpang 1000kg (2 Unit) senilai Rp 1.450.000.000 belum memiliki analisa AHS atau subkon terverifikasi.',
+    severity: 'warning',
+    assignedRoles: ['admin_teknik', 'estimator', 'pm_teknik'],
+    actionLabel: 'Hubungkan AHS / Spesifikasi',
+    actionModule: 'rab',
+    createdAt: '2026-10-19 11:20',
     status: 'open'
   },
   {
@@ -1811,74 +1855,14 @@ export const INITIAL_WARNINGS: WarningAlert[] = [
     projectId: 'prj-1',
     projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
     ptId: 'pt-1',
-    type: 'po_delayed',
-    title: 'Otorisasi Direktur Diperlukan: PO Ready Mix (> Rp 500 Jt)',
-    message: 'PO-2026-005 senilai Rp 619.380.000 melampaui batas limit wewenang PM Teknik (Rp 500 Jt) dan memerlukan persetujuan Direktur.',
-    severity: 'critical',
-    assignedRoles: ['direktur'],
-    actionLabel: 'Otorisasi PO di Approval Center',
-    actionModule: 'logistik',
-    createdAt: '2026-10-21 09:30',
-    status: 'open'
-  },
-  {
-    id: 'wrn-5',
-    projectId: 'prj-1',
-    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
-    ptId: 'pt-1',
-    type: 'spb_pending',
-    title: 'SPB Semen & Besi Membutuhkan Verifikasi Level 1 Site Manager',
-    message: 'Surat Permintaan Bahan SPB-2026-001 (50 sak semen) dan SPB-2026-002 dari pelaksana menunggu verifikasi mutu & kuota lapangan.',
-    severity: 'warning',
-    assignedRoles: ['site_manager'],
-    actionLabel: 'Verifikasi SPB Lapangan',
-    actionModule: 'logistik',
-    createdAt: '2026-10-21 08:45',
-    status: 'open'
-  },
-  {
-    id: 'wrn-6',
-    projectId: 'prj-1',
-    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
-    ptId: 'pt-1',
     type: 'unverified_wage',
-    title: 'Klaim Upah Mandor Sukarno Siap Dibayar (Rp 29.106.000)',
-    message: 'Opname borongan pembesian telah diverifikasi Site Manager dan PM. Menunggu pencairan kas / transfer dari Keuangan.',
+    title: 'Klaim Upah Borongan Siap Dibayar (Rp 29.106.000)',
+    message: 'SPK-BORONG-2026-008 Mandor Sukarno telah diverifikasi Site Manager dan membutuhkan validasi PM Teknik & Keuangan.',
     severity: 'info',
-    assignedRoles: ['admin_keuangan', 'pm_teknik', 'direktur'],
+    assignedRoles: ['pm_teknik', 'admin_keuangan'],
     actionLabel: 'Periksa & Cairkan Upah',
     actionModule: 'upah',
     createdAt: '2026-10-21 09:10',
-    status: 'open'
-  },
-  {
-    id: 'wrn-7',
-    projectId: 'prj-1',
-    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
-    ptId: 'pt-1',
-    type: 'missing_daily_report',
-    title: 'Laporan Harian Lapangan (LHR) Belum Diserahkan',
-    message: 'Laporan harian kemarin (Hari ke-141) mencakup 42 pekerja dan volume pembesian tie beam belum di-submit oleh Pelaksana.',
-    severity: 'warning',
-    assignedRoles: ['pelaksana', 'admin_lapangan'],
-    actionLabel: 'Input Laporan Harian (LHR)',
-    actionModule: 'progres',
-    createdAt: '2026-10-21 07:00',
-    status: 'open'
-  },
-  {
-    id: 'wrn-8',
-    projectId: 'prj-1',
-    projectName: 'Pembangunan Gedung Kantor 5 Lantai Grand Sudirman',
-    ptId: 'pt-1',
-    type: 'unmapped_rab',
-    title: 'Item RAB IV.1 Belum Terhubung Master AHS PUPR',
-    message: 'Item Pekerjaan Lift Penumpang 1000kg (2 Unit) belum memiliki pemetaan AHS atau analisa subkon spesialis.',
-    severity: 'warning',
-    assignedRoles: ['admin_teknik', 'estimator', 'pm_teknik'],
-    actionLabel: 'Hubungkan Master AHS',
-    actionModule: 'rab',
-    createdAt: '2026-10-19 11:20',
     status: 'open'
   }
 ];
@@ -1933,47 +1917,3 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     details: 'Menetapkan target margin laba proyek Gedung Sudirman sebesar 18.0% (Rp 3,33 Miliar)'
   }
 ];
-
-export const INITIAL_REVENUE_RECOGNITIONS: RevenueRecognition[] = [
-  {
-    id: 'rev-rec-1',
-    companyId: 'pt-1',
-    projectId: 'prj-1',
-    periodYear: 2026,
-    periodMonth: 8,
-    recognitionNo: 'PSAK72-202608-0001',
-    contractValue: 18_500_000_000,
-    progressPercent: 15.0,
-    revenueToDate: 2_775_000_000,
-    revenueRecognized: 0,
-    revenueThisMonth: 2_775_000_000,
-    journalId: 'JV-PSAK72-202608-001',
-    status: 'POSTED',
-    postedAt: '2026-08-31 17:00:00',
-    postedById: 'usr-1',
-    notes: 'Pengakuan Pendapatan PSAK 72 Periode Agustus 2026 (Progres Fisik 15.0%)',
-    createdAt: '2026-08-31 17:00:00',
-    updatedAt: '2026-08-31 17:00:00'
-  },
-  {
-    id: 'rev-rec-2',
-    companyId: 'pt-1',
-    projectId: 'prj-1',
-    periodYear: 2026,
-    periodMonth: 9,
-    recognitionNo: 'PSAK72-202609-0001',
-    contractValue: 18_500_000_000,
-    progressPercent: 28.0,
-    revenueToDate: 5_180_000_000,
-    revenueRecognized: 2_775_000_000,
-    revenueThisMonth: 2_405_000_000,
-    journalId: 'JV-PSAK72-202609-001',
-    status: 'POSTED',
-    postedAt: '2026-09-30 18:00:00',
-    postedById: 'usr-1',
-    notes: 'Pengakuan Pendapatan PSAK 72 Periode September 2026 (Progres Fisik 28.0%)',
-    createdAt: '2026-09-30 18:00:00',
-    updatedAt: '2026-09-30 18:00:00'
-  }
-];
-

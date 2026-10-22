@@ -6,21 +6,13 @@ import {
   HardHat,
   Bell,
   Smartphone,
-  RotateCcw,
-  ShieldCheck,
   ChevronDown,
   Layers,
-  MapPin,
-  TrendingUp,
-  AlertTriangle,
   Users,
   Image as ImageIcon,
   Plus,
-  Shield
-} from 'lucide-react';
-import { CompanySettingsModal } from './CompanySettingsModal';
-import { ClientManagementModal } from './ClientManagementModal';
-import {
+  Share2,
+  Shield,
   ShieldAlert,
   Sliders,
   CheckCircle2,
@@ -28,8 +20,18 @@ import {
   Unlock,
   KeyRound,
   FileCheck2,
-  UserCheck
+  UserCheck,
+  RotateCcw,
+  Settings,
+  ChevronRight,
+  Sparkles,
+  Trash2,
+  Edit2
 } from 'lucide-react';
+import { CompanySettingsModal } from './CompanySettingsModal';
+import { ClientManagementModal } from './ClientManagementModal';
+import { ShareLinkModal } from './ShareLinkModal';
+import { ResetDataModal } from './ResetDataModal';
 
 export const Navbar: React.FC<{
   onOpenWarnings?: () => void;
@@ -65,7 +67,6 @@ export const Navbar: React.FC<{
     isMobileFieldMode,
     setIsMobileFieldMode,
     warnings,
-    resetAllData,
     materialRequests,
     purchaseOrders,
     wageRecords,
@@ -75,10 +76,12 @@ export const Navbar: React.FC<{
   } = useApp();
 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
-  const [showPTMenu, setShowPTMenu] = useState(false);
-  const [showProjectMenu, setShowProjectMenu] = useState(false);
+  const [showProjectSelector, setShowProjectSelector] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [isCompanySettingsOpen, setIsCompanySettingsOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   // Security Lock PIN verification modal state
   const [pendingTargetRole, setPendingTargetRole] = useState<UserRole | null>(null);
@@ -114,362 +117,385 @@ export const Navbar: React.FC<{
     w => w.status === 'open' && (w.assignedRoles.includes(activeRole) || activeRole === 'direktur')
   );
 
-  // Filter projects by active PT (1 Perusahaan Multi-Proyek)
-  const filteredProjects = activeRole === 'direktur' || currentRoleInfo.crossPT
-    ? projects
-    : projects.filter(p => p.ptId === activePTId);
+  const totalNotifications = totalPendingApprovals + relevantWarnings.length;
 
-  const ptProjects = projects.filter(p => p.ptId === activePTId);
-  const ptClients = clients.filter(c => c.companyId === activePTId);
+  // Strictly filter projects by active PT
+  const projectsInActivePT = projects.filter(p => p.ptId === activePTId);
 
   return (
-    <header className="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-inner">
-              <HardHat className="w-6 h-6 text-slate-950" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-amber-400 to-amber-200 bg-clip-text text-transparent">
-                  KONTRAKTOR PRO
-                </span>
-                <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  ERP MULTI-PT & MULTI-PROYEK
+    <header className="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-sm notranslate" translate="no">
+      <div className="w-full px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
+          
+          {/* ZONE 1: Brand & Project Selector (Zoom & Shrink resilient) */}
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 max-w-xl">
+            {/* Wordmark */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500 flex items-center justify-center text-slate-950 font-black shadow-sm">
+                <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" />
+              </div>
+              <div className="hidden sm:block">
+                <span translate="no" className="notranslate font-extrabold text-sm sm:text-base tracking-tight text-white whitespace-nowrap">
+                  MODESTY <span className="text-amber-400 font-semibold text-xs tracking-normal">ERP</span>
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Sistem Manajemen Konstruksi Terpadu (AHS PUPR, RAP, Prisma v2.2)
-              </p>
             </div>
-          </div>
 
-          {/* Center: Context Selectors (PT & Proyek) */}
-          <div className="hidden lg:flex items-center gap-2">
-            {/* PT Selector with Company Logo */}
-            <div className="relative">
+            <div className="hidden md:block h-5 w-px bg-slate-800 shrink-0" />
+
+            {/* Unified Project & PT Selector */}
+            <div className="relative min-w-0 flex-1 max-w-sm sm:max-w-md">
               <button
                 onClick={() => {
-                  setShowPTMenu(!showPTMenu);
-                  setShowProjectMenu(false);
+                  setShowProjectSelector(!showProjectSelector);
                   setShowRoleMenu(false);
+                  setShowSettingsMenu(false);
                 }}
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-200 transition"
-                title="Pilih Entitas PT & Kelola Logo"
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-slate-800/90 hover:bg-slate-800 border border-slate-700/80 text-xs text-slate-200 transition group w-full overflow-hidden"
               >
                 {currentPT?.logoUrl ? (
                   <img
                     src={currentPT.logoUrl}
                     alt={currentPT.code}
-                    className="w-5 h-5 rounded object-contain bg-slate-900 border border-slate-700 shrink-0"
+                    className="w-4 h-4 rounded object-contain shrink-0"
                   />
                 ) : (
                   <Building2 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 )}
-                <span className="font-bold max-w-[140px] truncate text-amber-300">
-                  {currentPT?.code || 'Pilih PT'}
+                
+                <span className="font-semibold text-amber-300 truncate max-w-[70px] sm:max-w-[100px] shrink-0">
+                  {currentPT?.code}
                 </span>
-                <span className="text-[10px] text-slate-400">
-                  ({ptProjects.length} Proyek)
+                
+                <span className="text-slate-500 shrink-0">/</span>
+                
+                <span className="font-medium text-slate-100 truncate min-w-0 flex-1 text-left">
+                  {currentProject?.name || '(Belum ada proyek)'}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+
+                {currentProject ? (
+                  <span className="hidden sm:inline font-mono text-[10px] bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded font-bold shrink-0">
+                    {currentProject.actualProgressPercent}%
+                  </span>
+                ) : (
+                  <span className="hidden sm:inline text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold shrink-0">
+                    + Proyek
+                  </span>
+                )}
+
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition shrink-0 ml-0.5" />
               </button>
 
-              {showPTMenu && (
-                <div className="absolute left-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 flex items-center justify-between">
-                    <span>Entitas Perusahaan (PT)</span>
-                    <span className="text-amber-400 font-bold">{pts.length} PT Terdaftar</span>
-                  </div>
-
-                  <div className="space-y-1 my-1.5 max-h-56 overflow-y-auto">
-                    {pts.map(pt => {
-                      const childProjCount = projects.filter(p => p.ptId === pt.id).length;
-                      return (
-                        <button
-                          key={pt.id}
-                          onClick={() => {
-                            setActivePTId(pt.id);
-                            setShowPTMenu(false);
-                          }}
-                          className={`w-full text-left p-2 rounded-lg flex items-center gap-2.5 transition ${
-                            activePTId === pt.id
-                              ? 'bg-amber-500 text-slate-950 font-medium'
-                              : 'hover:bg-slate-700/60 text-slate-200'
-                          }`}
-                        >
-                          {pt.logoUrl ? (
-                            <img
-                              src={pt.logoUrl}
-                              alt={pt.code}
-                              className="w-7 h-7 rounded-lg object-contain bg-slate-900 p-0.5 border border-slate-700 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-7 h-7 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs shrink-0">
-                              {pt.code.slice(0, 2)}
-                            </div>
-                          )}
-
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between text-xs font-semibold">
-                              <span className="truncate">{pt.name}</span>
-                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                                activePTId === pt.id ? 'bg-slate-900 text-amber-300' : 'bg-slate-900 text-slate-400'
-                              }`}>
-                                {pt.code}
-                              </span>
-                            </div>
-                            <div className={`text-[10px] truncate ${activePTId === pt.id ? 'text-slate-900 font-medium' : 'text-slate-400'}`}>
-                              {childProjCount} Proyek Aktif • NPWP: {pt.npwp}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Actions inside PT dropdown */}
-                  <div className="pt-2 border-t border-slate-700 space-y-1 text-xs">
-                    <button
-                      onClick={() => {
-                        setShowPTMenu(false);
-                        setIsCompanySettingsOpen(true);
-                      }}
-                      className="w-full py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg flex items-center justify-center gap-1.5 transition text-[11px]"
-                    >
-                      <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Profil Perusahaan & Ganti Logo PT</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowPTMenu(false);
-                        setIsClientModalOpen(true);
-                      }}
-                      className="w-full py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg flex items-center justify-center gap-1.5 transition text-[11px]"
-                    >
-                      <Users className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Database Klien ({ptClients.length} Klien)</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        setShowPTMenu(false);
-                        onOpenAddEntity?.('pt');
-                      }}
-                      className="w-full py-1.5 px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold rounded-lg flex items-center justify-center gap-1.5 transition text-[11px]"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Tambah Perusahaan (PT Baru)</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Project Selector (1 Perusahaan Multi-Proyek) */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setShowProjectMenu(!showProjectMenu);
-                  setShowPTMenu(false);
-                  setShowRoleMenu(false);
-                }}
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-200 transition"
-                title="Pilih Proyek Aktif"
-              >
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
-                <span className="font-medium max-w-[170px] truncate">{currentProject?.name || 'Pilih Proyek'}</span>
-                <span className="bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] font-mono">
-                  {currentProject?.actualProgressPercent}%
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              </button>
-
-              {showProjectMenu && (
-                <div className="absolute left-0 mt-2 w-84 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 flex justify-between">
-                    <span>Proyek {currentPT?.code} (Multi-Proyek)</span>
-                    <span>Progres</span>
-                  </div>
-
-                  <div className="space-y-1 my-1.5 max-h-60 overflow-y-auto">
-                    {filteredProjects.map(proj => (
+              {/* Selector Popover */}
+              {showProjectSelector && (
+                <div className="absolute left-0 mt-2 w-88 sm:w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 text-slate-200">
+                  
+                  {/* PT Selector Tabs */}
+                  <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>Pilih Perusahaan (PT)</span>
+                    <div className="flex items-center gap-2">
                       <button
-                        key={proj.id}
                         onClick={() => {
-                          setActiveProjectId(proj.id);
-                          setActivePTId(proj.ptId);
-                          setShowProjectMenu(false);
+                          setShowProjectSelector(false);
+                          setIsCompanySettingsOpen(true);
                         }}
-                        className={`w-full text-left p-2.5 rounded-lg flex items-center justify-between transition ${
-                          activeProjectId === proj.id ? 'bg-blue-600 text-white' : 'hover:bg-slate-700/60 text-slate-200'
+                        className="text-amber-400 hover:text-amber-300 normal-case flex items-center gap-1 font-bold text-[11px]"
+                        title="Kelola Data dan Logo PT"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Edit PT</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowProjectSelector(false);
+                          onOpenAddEntity?.('pt');
+                        }}
+                        className="text-amber-400 hover:text-amber-300 normal-case flex items-center gap-1 font-bold text-[11px]"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Tambah PT</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5 mb-3 max-h-36 overflow-y-auto">
+                    {pts.map(pt => (
+                      <button
+                        key={pt.id}
+                        onClick={() => setActivePTId(pt.id)}
+                        className={`p-2 rounded-lg text-left text-xs transition border flex items-center justify-between ${
+                          activePTId === pt.id
+                            ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-bold'
+                            : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
-                        <div className="min-w-0 pr-2">
-                          <div className="text-xs font-semibold truncate">{proj.name}</div>
-                          <div className="text-[10px] opacity-80 flex items-center gap-1.5 mt-0.5">
-                            <span className="font-mono bg-black/30 px-1 rounded">{proj.code}</span>
-                            <span>•</span>
-                            <span className="truncate">Klien: {proj.clientName}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-5 h-5 rounded bg-slate-950 flex items-center justify-center text-[10px] font-mono shrink-0">
+                            {pt.code.slice(0, 2)}
                           </div>
+                          <span className="truncate">{pt.code}</span>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-xs font-mono font-bold">{proj.actualProgressPercent}%</div>
-                          <div className="text-[10px] opacity-70">Plan: {proj.plannedProgressPercent}%</div>
-                        </div>
+                        <span className="text-[10px] opacity-70 font-mono">
+                          {projects.filter(p => p.ptId === pt.id).length}
+                        </span>
                       </button>
                     ))}
                   </div>
 
-                  {/* Add Project Button */}
-                  <div className="pt-2 border-t border-slate-700">
+                  {/* Projects under active PT */}
+                  <div className="border-t border-slate-800 pt-2">
+                    <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                      <span>Proyek {currentPT?.code} ({projectsInActivePT.length})</span>
+                      <button
+                        onClick={() => {
+                          setShowProjectSelector(false);
+                          onOpenAddEntity?.('project');
+                        }}
+                        className="text-amber-400 hover:text-amber-300 normal-case flex items-center gap-1 font-bold text-[11px]"
+                      >
+                        <Plus className="w-3 h-3" />
+                        <span>Daftar Proyek Baru</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-1 max-h-48 overflow-y-auto">
+                      {projectsInActivePT.length === 0 ? (
+                        <div className="p-4 text-center rounded-lg bg-slate-800/50 border border-dashed border-slate-700/80 my-1">
+                          <p className="text-xs text-slate-400">Belum ada proyek terdaftar untuk {currentPT?.name || 'PT ini'}.</p>
+                          <button
+                            onClick={() => {
+                              setShowProjectSelector(false);
+                              onOpenAddEntity?.('project');
+                            }}
+                            className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition shadow-sm"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Daftarkan Proyek Pertama</span>
+                          </button>
+                        </div>
+                      ) : (
+                        projectsInActivePT.map(proj => (
+                          <button
+                            key={proj.id}
+                            onClick={() => {
+                              setActiveProjectId(proj.id);
+                              setActivePTId(proj.ptId);
+                              setShowProjectSelector(false);
+                            }}
+                            className={`w-full p-2 rounded-lg text-left text-xs transition flex items-center justify-between ${
+                              activeProjectId === proj.id
+                                ? 'bg-amber-500 text-slate-950 font-bold'
+                                : 'hover:bg-slate-800 text-slate-200'
+                            }`}
+                          >
+                            <div className="min-w-0 pr-2">
+                              <div className="truncate">{proj.name}</div>
+                              <div className={`text-[10px] ${activeProjectId === proj.id ? 'text-slate-900' : 'text-slate-400'} flex items-center gap-1 mt-0.5`}>
+                                <span className="font-mono">{proj.code}</span>
+                                <span>•</span>
+                                <span className="truncate">{proj.clientName}</span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono">{proj.actualProgressPercent}%</span>
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ZONE 2: Clean Actions & Profile Controls (Strict Shrink & Truncation) */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 ml-2">
+            
+            {/* Share App Link */}
+            <button
+              onClick={() => setIsShareModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition shrink-0 whitespace-nowrap"
+              title="Bagikan Tautan Aplikasi untuk Tim & Lapangan"
+            >
+              <Share2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span className="hidden sm:inline">Bagikan</span>
+            </button>
+
+            {/* Mobile Mode Quick Switcher */}
+            <button
+              onClick={() => setIsMobileFieldMode(!isMobileFieldMode)}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium border transition shrink-0 whitespace-nowrap ${
+                isMobileFieldMode
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow-xs'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800 border-slate-700/80'
+              }`}
+              title="Mode Input Mandor / Pelaksana Lapangan"
+            >
+              <Smartphone className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden md:inline">Mode Lapangan</span>
+            </button>
+
+            {/* Notification / Approvals Center */}
+            <button
+              onClick={() => {
+                if (onOpenWarnings) {
+                  onOpenWarnings();
+                } else if (onOpenApprovalCenter) {
+                  onOpenApprovalCenter();
+                }
+              }}
+              className="relative p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 transition shrink-0"
+              title={`${totalPendingApprovals} Persetujuan Pending, ${relevantWarnings.length} Peringatan (Klik untuk Mitigasi / Hapus)`}
+            >
+              <Bell className="w-4 h-4 text-slate-300" />
+              {totalNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 font-extrabold text-[10px] w-4 h-4 rounded-full flex items-center justify-center shadow-xs">
+                  {totalNotifications}
+                </span>
+              )}
+            </button>
+
+            {/* Settings & Configuration Popover */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => {
+                  setShowSettingsMenu(!showSettingsMenu);
+                  setShowRoleMenu(false);
+                  setShowProjectSelector(false);
+                }}
+                className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 transition"
+                title="Pengaturan Perusahaan, Klien, dan Hak Akses"
+              >
+                <Settings className="w-4 h-4 text-slate-300" />
+              </button>
+
+              {showSettingsMenu && (
+                <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 text-slate-200 animate-in fade-in zoom-in-95">
+                  <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                    Pengaturan & Tata Kelola
+                  </div>
+                  <div className="py-1 space-y-0.5 text-xs">
                     <button
                       onClick={() => {
-                        setShowProjectMenu(false);
-                        onOpenAddEntity?.('project');
+                        setShowSettingsMenu(false);
+                        setIsCompanySettingsOpen(true);
                       }}
-                      className="w-full py-1.5 px-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 font-bold text-xs rounded-lg flex items-center justify-center gap-1.5 transition"
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2.5 transition text-slate-200"
                     >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>+ Daftarkan Proyek Baru untuk {currentPT?.code}</span>
+                      <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Profil PT & Ganti Logo</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowSettingsMenu(false);
+                        setIsClientModalOpen(true);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2.5 transition text-slate-200"
+                    >
+                      <Users className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Database Klien ({clients.length})</span>
+                    </button>
+
+                    {onOpenRoleMatrix && (
+                      <button
+                        onClick={() => {
+                          setShowSettingsMenu(false);
+                          onOpenRoleMatrix();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2.5 transition text-slate-200"
+                      >
+                        <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Matriks Hak Akses (12 Role)</span>
+                      </button>
+                    )}
+
+                    {onOpenRoleLimitConfig && (
+                      <button
+                        onClick={() => {
+                          setShowSettingsMenu(false);
+                          onOpenRoleLimitConfig();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2.5 transition text-slate-200"
+                      >
+                        <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Atur Batas Limit Nominal</span>
+                      </button>
+                    )}
+
+                    {onOpenUserManagement && (
+                      <button
+                        onClick={() => {
+                          setShowSettingsMenu(false);
+                          onOpenUserManagement();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 flex items-center gap-2.5 transition text-slate-200"
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Admin Keamanan & PIN</span>
+                      </button>
+                    )}
+
+                    <div className="border-t border-slate-800 my-1" />
+
+                    {/* Reset Application Modal Trigger */}
+                    <button
+                      onClick={() => {
+                        setShowSettingsMenu(false);
+                        setIsResetModalOpen(true);
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 flex items-center gap-2.5 transition text-xs font-semibold"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Reset & Pembersihan Data</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Quick Button: Data Klien */}
-            <button
-              onClick={() => setIsClientModalOpen(true)}
-              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700/80 px-2.5 py-1.5 rounded-lg border border-slate-700 text-xs text-slate-200 transition"
-              title="Kelola Data Klien & Pemberi Tugas"
-            >
-              <Users className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden xl:inline">Data Klien</span>
-              <span className="px-1 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">
-                {ptClients.length}
-              </span>
-            </button>
-          </div>
-
-          {/* Right Action: Mobile Mode, Matrix, Warnings, Role Switcher */}
-          <div className="flex items-center gap-2">
-            {/* Quick Logo / Company Profile Settings Button */}
-            <button
-              onClick={() => setIsCompanySettingsOpen(true)}
-              className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition shadow-xs"
-              title="Profil Perusahaan & Logo Resmi"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-amber-400" />
-              <span>Logo & Profil PT</span>
-            </button>
-
-            {/* Approval Center Button */}
-            {onOpenApprovalCenter && (
-              <button
-                onClick={onOpenApprovalCenter}
-                className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition shadow-xs"
-                title="Buka Pusat Otorisasi & Persetujuan Bertingkat (Approval Center)"
-              >
-                <FileCheck2 className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">Approval Center</span>
-                {totalPendingApprovals > 0 && (
-                  <span className="bg-rose-500 text-white font-mono font-bold text-[10px] px-1.5 py-0.2 rounded-full animate-pulse">
-                    {totalPendingApprovals}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* Super Admin & User Management Button */}
-            {onOpenUserManagement && (
-              <button
-                onClick={onOpenUserManagement}
-                className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700 transition shadow-xs"
-                title={`Pengaturan Super Admin & Akses Staf (Terdaftar: ${adminSettings.ownerName})`}
-              >
-                <Shield className="w-3.5 h-3.5 text-amber-400" />
-                <span>Admin Akses</span>
-                {adminSettings.isSecurityLocked && (
-                  <Lock className="w-2.5 h-2.5 text-rose-400 ml-0.5" />
-                )}
-              </button>
-            )}
-
-            {/* Role Matrix Modal Button */}
-            {onOpenRoleMatrix && (
-              <button
-                onClick={onOpenRoleMatrix}
-                className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30 hover:bg-amber-500/20 transition shadow-xs"
-                title="Lihat Matriks Hak Akses & Pembagian Tugas 12 Role"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                <span>Matriks 12 Role</span>
-              </button>
-            )}
-
-            {/* Quick Mobile Field Mode Toggle */}
-            <button
-              onClick={() => setIsMobileFieldMode(!isMobileFieldMode)}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition ${
-                isMobileFieldMode
-                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold shadow'
-                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-              }`}
-              title="Beralih ke Tampilan Mandor / Pelaksana Lapangan (Mobile Mode)"
-            >
-              <Smartphone className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Mode Lapangan</span>
-            </button>
-
-            {/* Early Warning Trigger Button */}
-            {onOpenWarnings && (
-              <button
-                onClick={onOpenWarnings}
-                className="relative p-2 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700 transition"
-                title="Peringatan Dini Deviasi & Risiko"
-              >
-                <Bell className="w-4 h-4 text-amber-400" />
-                {relevantWarnings.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
-                    {relevantWarnings.length}
-                  </span>
-                )}
-              </button>
-            )}
-
-            {/* Role Switcher Dropdown */}
-            <div className="relative">
+            {/* User Profile & Role Switcher */}
+            <div className="relative shrink-0">
               <button
                 onClick={() => {
                   setShowRoleMenu(!showRoleMenu);
-                  setShowPTMenu(false);
-                  setShowProjectMenu(false);
+                  setShowProjectSelector(false);
+                  setShowSettingsMenu(false);
                 }}
-                className="flex items-center gap-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs shadow transition"
+                className="flex items-center gap-2 sm:gap-2.5 pl-2 pr-2.5 sm:pr-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700/90 border border-slate-700/80 transition"
               >
-                {adminSettings.isSecurityLocked && (
-                  <Lock className="w-3 h-3 text-slate-950" />
-                )}
-                <span className="max-w-[130px] truncate">{currentRoleInfo.title}</span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-950" />
+                <div className="w-6 h-6 rounded-md bg-amber-500 text-slate-950 font-bold text-xs flex items-center justify-center shrink-0">
+                  {currentRoleInfo.title.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="text-left hidden sm:block">
+                  <div className="text-xs font-bold text-white max-w-[100px] md:max-w-[120px] truncate leading-tight">
+                    {currentRoleInfo.title}
+                  </div>
+                  <div className="text-[10px] text-slate-400 leading-none mt-0.5">
+                    {activeRole === 'direktur' ? 'Holding Executive' : 'Divisi Proyek'}
+                  </div>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               </button>
 
+              {/* Role Switcher Dropdown */}
               {showRoleMenu && (
-                <div className="absolute right-0 mt-2 w-84 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95">
-                  <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-700 flex justify-between items-center">
-                    <span>Simulasi Peran Pengguna (12 Role)</span>
+                <div className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 text-slate-200">
+                  <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-white">Simulasi Peran Pengguna</div>
+                      <div className="text-[11px] text-slate-400">Pilih dari 12 hak akses divisi</div>
+                    </div>
                     {adminSettings.isSecurityLocked && (
-                      <span className="text-rose-400 text-[10px] font-bold flex items-center gap-1">
+                      <span className="text-rose-400 text-[10px] font-bold flex items-center gap-1 bg-rose-500/10 px-1.5 py-0.5 rounded">
                         <Lock className="w-3 h-3" />
-                        <span>Terkunci PIN</span>
+                        <span>PIN Aktif</span>
                       </span>
                     )}
                   </div>
-                  <div className="max-h-96 overflow-y-auto py-1">
+
+                  <div className="max-h-72 overflow-y-auto py-1 space-y-0.5">
                     {roles.map(r => (
                       <button
                         key={r.id}
@@ -485,78 +511,53 @@ export const Navbar: React.FC<{
                             setShowRoleMenu(false);
                           }
                         }}
-                        className={`w-full text-left p-2 rounded-lg flex items-start gap-2.5 transition ${
-                          activeRole === r.id ? 'bg-amber-500 text-slate-950' : 'hover:bg-slate-700/60 text-slate-200'
+                        className={`w-full text-left p-2 rounded-lg flex items-center gap-2.5 transition text-xs ${
+                          activeRole === r.id
+                            ? 'bg-amber-500 text-slate-950 font-bold'
+                            : 'hover:bg-slate-800 text-slate-200'
                         }`}
                       >
-                        <div className={`mt-0.5 w-2 h-2 rounded-full ${activeRole === r.id ? 'bg-slate-950' : 'bg-amber-400'}`} />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between text-xs font-bold">
-                            <span>{r.title}</span>
-                            {r.crossPT && (
-                              <span className={`text-[9px] px-1 rounded ${activeRole === r.id ? 'bg-slate-900 text-amber-300' : 'bg-slate-700 text-slate-300'}`}>
-                                Lintas PT
-                              </span>
-                            )}
-                          </div>
-                          <div className={`text-[10px] ${activeRole === r.id ? 'text-slate-900' : 'text-slate-400'}`}>
-                            {r.department} • {r.canApprove ? `Approval s/d Rp ${(r.approvalLimit / 1_000_000).toLocaleString('id-ID')} Jt` : 'Tidak Ada Approval'}
-                          </div>
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${activeRole === r.id ? 'bg-slate-950' : 'bg-amber-400'}`} />
+                        <div className="flex-1 truncate">
+                          <span>{r.title}</span>
                         </div>
+                        {r.crossPT && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                            activeRole === r.id ? 'bg-slate-950 text-amber-300' : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            Lintas PT
+                          </span>
+                        )}
                       </button>
                     ))}
                   </div>
 
-                  {/* Actions inside Role Menu */}
-                  <div className="pt-2 border-t border-slate-700 space-y-1">
-                    {onOpenRoleLimitConfig && (
+                  {/* Super Admin Quick Reset Button */}
+                  {activeRole === 'direktur' && (
+                    <div className="border-t border-slate-800 pt-2 px-1">
                       <button
                         onClick={() => {
                           setShowRoleMenu(false);
-                          onOpenRoleLimitConfig();
+                          setIsResetModalOpen(true);
                         }}
-                        className="w-full py-1.5 px-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold rounded-lg flex items-center justify-center gap-1.5 text-[11px]"
+                        className="w-full py-1.5 px-2 bg-rose-600/15 hover:bg-rose-600/25 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition"
                       >
-                        <Sliders className="w-3 h-3 text-amber-400" />
-                        <span>Atur Limit Otorisasi Nominal (Direktur)</span>
+                        <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                        <span>Reset Data Aplikasi (Super Admin)</span>
                       </button>
-                    )}
-                    {onOpenUserManagement && (
-                      <button
-                        onClick={() => {
-                          setShowRoleMenu(false);
-                          onOpenUserManagement();
-                        }}
-                        className="w-full py-1.5 px-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold rounded-lg flex items-center justify-center gap-1.5 text-[11px]"
-                      >
-                        <Shield className="w-3 h-3" />
-                        <span>Kelola Akses Pengguna & Kunci PIN</span>
-                      </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Reset Data Button */}
-            <button
-              onClick={() => {
-                if (window.confirm('Reset semua data kembali ke default demo proyek?')) {
-                  resetAllData();
-                }
-              }}
-              className="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-rose-400 hover:bg-slate-700 border border-slate-700 transition"
-              title="Reset Demo Data"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Security PIN Prompt Modal when Role Switcher is Locked */}
+      {/* Security PIN Modal */}
       {pendingTargetRole && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -570,17 +571,15 @@ export const Navbar: React.FC<{
                 setPinError(true);
               }
             }}
-            className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-slate-900 space-y-4 animate-in fade-in zoom-in-95"
+            className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-slate-900"
           >
-            <div className="text-center space-y-1.5">
-              <div className="w-12 h-12 bg-amber-100 text-amber-800 rounded-full flex items-center justify-center mx-auto">
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
                 <Lock className="w-6 h-6" />
               </div>
-              <h3 className="font-extrabold text-base text-slate-900">
-                Otorisasi Akses Terkunci
-              </h3>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Aplikasi ini terdaftar resmi atas nama <strong>{adminSettings.ownerName}</strong>. Masukkan PIN Admin untuk beralih ke role <strong>{roles.find(r => r.id === pendingTargetRole)?.title}</strong>.
+              <h3 className="font-extrabold text-base text-slate-900">Pergantian Peran Terkunci</h3>
+              <p className="text-xs text-slate-500">
+                Masukkan PIN Admin Keamanan untuk beralih ke peran ini. (Default: 1234)
               </p>
             </div>
 
@@ -588,25 +587,24 @@ export const Navbar: React.FC<{
               <input
                 type="password"
                 maxLength={6}
-                autoFocus
-                placeholder="PIN Admin (Default: 1234)"
                 value={enteredPin}
                 onChange={e => {
                   setEnteredPin(e.target.value);
                   setPinError(false);
                 }}
-                className={`w-full p-3 border rounded-xl font-mono text-center text-lg tracking-widest font-black focus:outline-none ${
-                  pinError ? 'border-rose-500 bg-rose-50' : 'border-slate-300 focus:border-amber-500'
+                placeholder="Masukkan 4-digit PIN"
+                className={`w-full text-center text-xl font-mono tracking-widest py-2.5 rounded-xl border ${
+                  pinError ? 'border-rose-500 bg-rose-50' : 'border-slate-300'
                 }`}
               />
               {pinError && (
                 <div className="text-rose-600 font-bold text-xs text-center mt-1.5">
-                  PIN Salah! Masukkan PIN yang benar atau buka kunci di menu Admin Akses.
+                  PIN Salah! Masukkan PIN yang benar.
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-2">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => {
@@ -614,13 +612,13 @@ export const Navbar: React.FC<{
                   setEnteredPin('');
                   setPinError(false);
                 }}
-                className="py-2 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs"
+                className="py-2 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-100"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow"
+                className="py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs"
               >
                 Verifikasi PIN
               </button>
@@ -641,6 +639,18 @@ export const Navbar: React.FC<{
       <ClientManagementModal
         isOpen={isClientModalOpen}
         onClose={() => setIsClientModalOpen(false)}
+      />
+
+      {/* Share Link & QR Code Modal */}
+      <ShareLinkModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
+
+      {/* Reset Data & Pembersihan Modal */}
+      <ResetDataModal
+        isOpen={isResetModalOpen}
+        onClose={() => setIsResetModalOpen(false)}
       />
     </header>
   );

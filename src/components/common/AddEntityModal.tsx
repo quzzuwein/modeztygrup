@@ -133,8 +133,19 @@ export const AddEntityModal: React.FC<AddEntityModalProps> = ({
       return;
     }
 
-    addPT({
-      code: ptCode.toUpperCase().trim(),
+    const trimmedCode = ptCode.toUpperCase().trim();
+    const trimmedName = ptName.trim().toLowerCase();
+    const isDup = pts.some(
+      p => p.code.toUpperCase().trim() === trimmedCode ||
+           p.name.trim().toLowerCase() === trimmedName
+    );
+    if (isDup) {
+      alert(`Pendaftaran Ditolak: Perusahaan dengan kode "${trimmedCode}" atau nama "${ptName}" sudah terdaftar dalam sistem! Harap gunakan kode atau nama yang berbeda.`);
+      return;
+    }
+
+    const res = addPT({
+      code: trimmedCode,
       name: ptName.trim(),
       legalName: ptLegalName.trim(),
       npwp: ptNpwp.trim(),
@@ -145,7 +156,12 @@ export const AddEntityModal: React.FC<AddEntityModalProps> = ({
       logoUrl: logoUrl.trim()
     });
 
-    alert(`Perusahaan baru "${ptName}" (${ptCode}) dengan logo resmi berhasil ditambahkan dan langsung aktif!`);
+    if (!res.success) {
+      alert(res.message);
+      return;
+    }
+
+    alert(`Perusahaan baru "${ptName}" (${trimmedCode}) dengan logo resmi berhasil didaftarkan dan langsung aktif!`);
     onClose();
   };
 
@@ -415,42 +431,102 @@ export const AddEntityModal: React.FC<AddEntityModalProps> = ({
               </div>
             </div>
 
-            {/* Financial Parameters */}
-            <div className="grid grid-cols-2 gap-2.5 p-3 rounded-xl bg-amber-50/70 border border-amber-300/70">
+            {/* Financial Parameters (Nilai Kontrak Ratusan Ribu & Target Margin Bebas) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl bg-amber-50/80 border border-amber-300">
               <div>
-                <label className="font-bold text-amber-950">Nilai Kontrak Klien (IDR) *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-amber-950 text-xs">Nilai Kontrak Klien (IDR) *</label>
+                  <span className="text-[10px] text-amber-700 font-semibold">Kelipatan Rp 100.000</span>
+                </div>
                 <input
                   type="number"
                   required
-                  min="1000000"
-                  step="1000000"
+                  min="100000"
+                  step="100000"
                   value={contractValue}
-                  onChange={e => setContractValue(parseFloat(e.target.value) || 0)}
-                  className="w-full mt-1 p-2 border border-amber-400 bg-white rounded-lg font-mono font-extrabold text-slate-900"
+                  onChange={e => setContractValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full p-2 border border-amber-400 bg-white rounded-lg font-mono font-extrabold text-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  placeholder="Contoh: 5680500000"
                 />
-                <div className="text-[10px] text-slate-600 mt-1 font-mono font-semibold">{formatRupiah(contractValue)}</div>
-              </div>
+                <div className="text-[11px] text-slate-900 mt-1 font-mono font-bold flex items-center justify-between">
+                  <span>{formatRupiah(contractValue)}</span>
+                </div>
 
-              <div>
-                <label className="font-bold text-amber-950">Target Margin Laba Bersih (%) *</label>
-                <input
-                  type="number"
-                  required
-                  min="5"
-                  max="40"
-                  step="0.5"
-                  value={targetMargin}
-                  onChange={e => setTargetMargin(parseFloat(e.target.value) || 0)}
-                  className="w-full mt-1 p-2 border border-amber-400 bg-white rounded-lg font-mono font-extrabold text-slate-900"
-                />
-                <div className="text-[10px] text-emerald-700 mt-1 font-semibold">
-                  Profit Target: {formatRupiah(targetProfitNominal)}
+                {/* Quick Add Increment Pills */}
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setContractValue(prev => (prev || 0) + 100000000)}
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-amber-100 border border-amber-300 text-[10px] font-mono font-bold text-amber-900"
+                  >
+                    +100 Jt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractValue(prev => (prev || 0) + 10000000)}
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-amber-100 border border-amber-300 text-[10px] font-mono font-bold text-amber-900"
+                  >
+                    +10 Jt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractValue(prev => (prev || 0) + 1000000)}
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-amber-100 border border-amber-300 text-[10px] font-mono font-bold text-amber-900"
+                  >
+                    +1 Jt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setContractValue(prev => (prev || 0) + 100000)}
+                    className="px-1.5 py-0.5 rounded bg-white hover:bg-amber-100 border border-amber-300 text-[10px] font-mono font-bold text-amber-900"
+                  >
+                    +100 Rb
+                  </button>
                 </div>
               </div>
 
-              <div className="col-span-2 text-[11px] text-slate-600 pt-1 border-t border-amber-200 flex justify-between">
-                <span>Plafon Maksimal Belanja (RAP Plafon):</span>
-                <span className="font-mono font-bold text-slate-900">{formatRupiah(rapPlafon)}</span>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-amber-950 text-xs">Target Margin Laba Bersih (%) *</label>
+                  <span className="text-[10px] text-emerald-700 font-semibold">Bebas (Tanpa Batas 40%)</span>
+                </div>
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="0.1"
+                  value={targetMargin}
+                  onChange={e => setTargetMargin(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-full p-2 border border-amber-400 bg-white rounded-lg font-mono font-extrabold text-slate-900 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  placeholder="Contoh: 18.5"
+                />
+                <div className="text-[11px] text-emerald-800 mt-1 font-semibold flex items-center justify-between">
+                  <span>Target Profit:</span>
+                  <span className="font-mono font-bold">{formatRupiah(targetProfitNominal)}</span>
+                </div>
+
+                {/* Quick Margin Presets */}
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {[10, 15, 18, 20, 25, 30, 45, 50].map(pct => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setTargetMargin(pct)}
+                      className={`px-1.5 py-0.5 rounded border text-[10px] font-mono font-semibold transition ${
+                        targetMargin === pct
+                          ? 'bg-amber-500 text-slate-950 border-amber-600 font-bold'
+                          : 'bg-white hover:bg-amber-100 border-amber-300 text-amber-900'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="col-span-1 sm:col-span-2 text-xs text-slate-700 pt-2 border-t border-amber-200 flex items-center justify-between">
+                <span>Plafon Maksimal Belanja Operasional (RAP Plafon):</span>
+                <span className="font-mono font-extrabold text-slate-950 text-sm">{formatRupiah(rapPlafon)}</span>
               </div>
             </div>
 

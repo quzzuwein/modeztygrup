@@ -568,13 +568,13 @@ export interface FinancialEntry {
   type: 'masuk' | 'keluar';
   refDoc: string;
   payeeOrPayer: string;
+  isTaxable?: boolean;
   taxDetails?: {
     ppnRate?: number;
     ppnAmount?: number;
     pphFinalRate?: number; // 1.75%, 2.65%, 4%
     pphFinalAmount?: number;
   };
-  isTaxable?: boolean; // Transaksi resmi fiskal DJP
   status: 'diverifikasi' | 'pending' | 'selesai';
 }
 

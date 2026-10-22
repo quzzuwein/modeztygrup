@@ -200,11 +200,10 @@ export const RAPView: React.FC = () => {
                 <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-300 shadow-inner">
                   <input
                     type="number"
-                    min="5"
-                    max="40"
-                    step="0.5"
+                    min="0"
+                    step="0.1"
                     value={marginInput}
-                    onChange={e => setMarginInput(parseFloat(e.target.value) || 0)}
+                    onChange={e => setMarginInput(Math.max(0, parseFloat(e.target.value) || 0))}
                     className="w-16 text-center font-mono font-bold text-sm text-slate-900 focus:outline-none"
                   />
                   <span className="text-xs font-bold text-slate-500">%</span>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { parseExcelFile, generateRABExcelTemplate, matchAHS, ParseResult } from '../../../services/aiRabParser';
+import { parseExcelWorkbook, generateRABExcelTemplate, matchAHS, WorkbookParseResult, SheetParseResult } from '../../../services/aiRabParser';
 import { formatRupiah, exportRABToExcel, triggerPrintReport } from '../../../services/exportService';
 import { RABItem } from '../../../types';
 import {
@@ -43,7 +43,9 @@ export const RABView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'daftar' | 'import'>('daftar');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSection, setSelectedSection] = useState<string>('all');
-  const [parseResult, setParseResult] = useState<ParseResult | null>(null);
+  const [workbookResult, setWorkbookResult] = useState<WorkbookParseResult | null>(null);
+  const [selectedSheet, setSelectedSheet] = useState<string>('ALL');
+  const [includeZeroPrice, setIncludeZeroPrice] = useState<boolean>(true);
   const [isParsing, setIsParsing] = useState(false);
   const [mappingModalItem, setMappingModalItem] = useState<RABItem | null>(null);
 
@@ -84,6 +86,13 @@ export const RABView: React.FC = () => {
   const totalProjectedMargin = totalRABValue - totalRabTargetCost;
   const avgMarginPercent = totalRABValue > 0 ? (totalProjectedMargin / totalRABValue) * 100 : defaultProfit;
 
+  // Active sheet data helper
+  const currentSheetData: SheetParseResult | null = workbookResult
+    ? selectedSheet === 'ALL'
+      ? workbookResult.combinedResult
+      : workbookResult.sheets[selectedSheet] || workbookResult.combinedResult
+    : null;
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -93,10 +102,12 @@ export const RABView: React.FC = () => {
     reader.onload = evt => {
       try {
         const buffer = evt.target?.result as ArrayBuffer;
-        const result = parseExcelFile(buffer, file.name, masterAhs);
-        setParseResult(result);
+        const result = parseExcelWorkbook(buffer, file.name, masterAhs);
+        setWorkbookResult(result);
+        setSelectedSheet('ALL');
         setActiveTab('import');
       } catch (err) {
+        console.error('Excel parse error', err);
         alert('Gagal memproses file Excel: Pastikan format .xlsx atau .csv valid.');
       } finally {
         setIsParsing(false);
@@ -106,34 +117,34 @@ export const RABView: React.FC = () => {
   };
 
   const handleApplyImport = () => {
-    if (!parseResult) return;
+    if (!currentSheetData || !workbookResult) return;
 
-    const itemsToImport: Omit<RABItem, 'id'>[] = parseResult.rows
-      .filter(r => r.errors.length === 0)
+    const sourceRows = currentSheetData.rows;
+    const itemsToImport: Omit<RABItem, 'id'>[] = sourceRows
+      .filter(r => includeZeroPrice ? r.volume > 0 || r.totalPrice > 0 : r.errors.length === 0)
       .map(r => ({
         projectId: currentProject.id,
         wbsCode: r.wbsCode,
-        section: r.section,
+        section: r.sheetName ? `[${r.sheetName}] ${r.section}` : r.section,
         description: r.description,
-        volume: r.volume,
-        unit: r.unit,
+        volume: r.volume > 0 ? r.volume : 1,
+        unit: r.unit || 'ls',
         unitPrice: r.unitPrice,
         totalPrice: r.totalPrice,
         ahsCode: r.suggestedAhsCode,
         hasAhsMapped: Boolean(r.suggestedAhsCode),
         status: 'draft',
-        notes: `Import AI dari ${parseResult.fileName}`
+        notes: `Import Excel (${r.sheetName || workbookResult.fileName})`
       }));
 
     if (itemsToImport.length === 0) {
-      alert('Tidak ada baris valid untuk diimpor.');
+      alert('Tidak ada baris valid untuk diimpor. Periksa data pada sheet terpilih.');
       return;
     }
 
     importRABItems(itemsToImport);
-    setParseResult(null);
+    setWorkbookResult(null);
     setActiveTab('daftar');
-    alert(`Berhasil mengimpor ${itemsToImport.length} item pekerjaan RAB ke ${currentProject.name}!`);
   };
 
   const handleLoadSampleClientRAB = () => {
@@ -415,7 +426,7 @@ export const RABView: React.FC = () => {
           Daftar Item RAB ({projectRabItems.length})
         </button>
 
-        {parseResult && (
+        {workbookResult && (
           <button
             onClick={() => setActiveTab('import')}
             className={`px-4 py-2 text-xs font-bold border-b-2 transition flex items-center gap-1.5 ${
@@ -425,7 +436,9 @@ export const RABView: React.FC = () => {
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Hasil Pratinjau Excel ({parseResult.validRows} valid)</span>
+            <span>
+              Hasil Pratinjau Excel ({currentSheetData?.validRows || 0} valid dari {workbookResult.sheetNames.length} Sheet)
+            </span>
           </button>
         )}
       </div>
@@ -621,25 +634,25 @@ export const RABView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: PRATINJAU IMPORT EXCEL AI */}
-      {activeTab === 'import' && parseResult && (
+      {/* TAB 2: PRATINJAU IMPORT EXCEL AI (MULTI-SHEET) */}
+      {activeTab === 'import' && workbookResult && currentSheetData && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-3 gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-amber-500" />
                 <h3 className="font-bold text-slate-900 text-sm">
-                  Hasil Analisa File Excel: {parseResult.fileName}
+                  Hasil Analisa File Excel: <span className="font-mono text-amber-700">{workbookResult.fileName}</span>
                 </h3>
               </div>
-              <p className="text-xs text-slate-500">
-                Sistem secara otomatis mendeteksi kolom, menghitung total, dan mencocokkan uraian pekerjaan ke standar Permen PUPR.
+              <p className="text-xs text-slate-500 mt-0.5">
+                Terdeteksi {workbookResult.sheetNames.length} Sheet di dalam file Excel. Anda dapat memilih sheet tertentu atau langsung menggabungkan seluruh sheet ke RAB proyek.
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => setParseResult(null)}
+                onClick={() => setWorkbookResult(null)}
                 className="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition"
               >
                 Batal
@@ -649,62 +662,142 @@ export const RABView: React.FC = () => {
                 className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition"
               >
                 <Check className="w-4 h-4" />
-                <span>Simpan ke RAB Proyek ({parseResult.validRows} Baris)</span>
+                <span>
+                  Simpan ke RAB Proyek ({includeZeroPrice ? currentSheetData.rows.length : currentSheetData.validRows} Baris)
+                </span>
               </button>
+            </div>
+          </div>
+
+          {/* Sheet Selector Bar */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Pilih Sheet Excel yang Ingin Ditampilkan / Diimpor:</span>
+              </span>
+
+              <label className="inline-flex items-center gap-2 text-xs text-slate-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={includeZeroPrice}
+                  onChange={e => setIncludeZeroPrice(e.target.checked)}
+                  className="rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+                />
+                <span className="font-semibold text-slate-800">
+                  Sertakan baris tanpa harga / Rp 0 (dapat dihubungkan ke AHS nanti)
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setSelectedSheet('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                  selectedSheet === 'ALL'
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <span>SEMUA SHEET (GABUNGKAN)</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  selectedSheet === 'ALL' ? 'bg-slate-950 text-amber-300' : 'bg-slate-100 text-slate-600'
+                }`}>
+                  {workbookResult.combinedResult.rows.length} Baris
+                </span>
+              </button>
+
+              {workbookResult.sheetNames.map((name, i) => {
+                const sheetData = workbookResult.sheets[name];
+                const count = sheetData?.rows.length || 0;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => setSelectedSheet(name)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+                      selectedSheet === name
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                      selectedSheet === name ? 'bg-amber-400 text-slate-950 font-bold' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* Validation Metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-emerald-50 p-2.5 rounded-lg border border-emerald-200">
-              <span className="text-[10px] text-emerald-700 font-bold uppercase">Baris Valid</span>
+              <span className="text-[10px] text-emerald-700 font-bold uppercase">Baris Terdeteksi</span>
               <div className="text-base font-extrabold text-emerald-900 font-mono">
-                {parseResult.validRows} / {parseResult.totalRows}
+                {currentSheetData.validRows} / {currentSheetData.totalRows} Baris
               </div>
+              <span className="text-[10px] text-emerald-700">
+                {selectedSheet === 'ALL' ? 'Seluruh sheet Excel' : `Sheet: ${selectedSheet}`}
+              </span>
             </div>
 
             <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200">
               <span className="text-[10px] text-amber-700 font-bold uppercase">Terdeteksi AHS Otomatis</span>
               <div className="text-base font-extrabold text-amber-900 font-mono">
-                {parseResult.rows.filter(r => r.suggestedAhsCode).length} Item
+                {currentSheetData.rows.filter(r => r.suggestedAhsCode).length} Item
               </div>
+              <span className="text-[10px] text-amber-700">Dicocokkan ke Permen PUPR</span>
             </div>
 
             <div className="bg-blue-50 p-2.5 rounded-lg border border-blue-200 col-span-2">
-              <span className="text-[10px] text-blue-700 font-bold uppercase">Total Nilai Hasil Perhitungan</span>
+              <span className="text-[10px] text-blue-700 font-bold uppercase">Total Nilai Perhitungan</span>
               <div className="text-base font-extrabold text-blue-900 font-mono">
-                {formatRupiah(parseResult.calculatedGrandTotal)}
+                {formatRupiah(currentSheetData.calculatedGrandTotal)}
               </div>
+              <span className="text-[10px] text-blue-700">Kalkulasi harga satuan × volume</span>
             </div>
           </div>
 
           {/* Preview Rows Table */}
-          <div className="overflow-x-auto max-h-[450px] border border-slate-200 rounded-lg">
+          <div className="overflow-x-auto max-h-[480px] border border-slate-200 rounded-lg">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-700 font-semibold sticky top-0">
                 <tr>
                   <th className="p-2.5">WBS</th>
-                  <th className="p-2.5">Uraian Pekerjaan</th>
+                  {selectedSheet === 'ALL' && <th className="p-2.5">Sheet Asal</th>}
+                  <th className="p-2.5">Uraian Pekerjaan & Kategori</th>
                   <th className="p-2.5 text-right">Volume</th>
                   <th className="p-2.5 text-center">Satuan</th>
                   <th className="p-2.5 text-right">Harga Satuan (Rp)</th>
                   <th className="p-2.5 text-right">Total (Rp)</th>
                   <th className="p-2.5">Saran AHS PUPR</th>
-                  <th className="p-2.5 text-center">Validasi</th>
+                  <th className="p-2.5 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {parseResult.rows.map((r, idx) => (
-                  <tr key={idx} className={r.errors.length > 0 ? 'bg-rose-50/60' : 'hover:bg-slate-50'}>
+                {currentSheetData.rows.map((r, idx) => (
+                  <tr key={idx} className={r.errors.length > 0 && !includeZeroPrice ? 'bg-rose-50/60' : 'hover:bg-slate-50'}>
                     <td className="p-2.5 font-mono text-slate-600">{r.wbsCode}</td>
+                    {selectedSheet === 'ALL' && (
+                      <td className="p-2.5">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-semibold">
+                          {r.sheetName}
+                        </span>
+                      </td>
+                    )}
                     <td className="p-2.5">
                       <div className="font-semibold text-slate-900">{r.description}</div>
                       <div className="text-[10px] text-slate-400">{r.section}</div>
                     </td>
-                    <td className="p-2.5 text-right font-mono">{r.volume}</td>
+                    <td className="p-2.5 text-right font-mono font-medium">{r.volume}</td>
                     <td className="p-2.5 text-center font-mono">{r.unit}</td>
                     <td className="p-2.5 text-right font-mono">{formatRupiah(r.unitPrice)}</td>
-                    <td className="p-2.5 text-right font-mono font-bold">{formatRupiah(r.totalPrice)}</td>
+                    <td className="p-2.5 text-right font-mono font-bold text-slate-950">{formatRupiah(r.totalPrice)}</td>
                     <td className="p-2.5">
                       {r.suggestedAhsCode ? (
                         <div>
@@ -722,6 +815,10 @@ export const RABView: React.FC = () => {
                         <span className="inline-flex items-center text-emerald-600 font-bold text-[11px] gap-0.5">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>OK</span>
+                        </span>
+                      ) : includeZeroPrice ? (
+                        <span className="inline-flex items-center text-amber-600 font-bold text-[10px] gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded">
+                          <span>Perlu AHS</span>
                         </span>
                       ) : (
                         <span className="inline-flex items-center text-rose-600 font-bold text-[11px] gap-0.5" title={r.errors.join(', ')}>

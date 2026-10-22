@@ -83,12 +83,15 @@ interface AppContextType {
   currentPT?: PT;
   currentProject?: Project;
 
-  addPT: (pt: Omit<PT, 'id' | 'activeProjectsCount'>) => void;
+  addPT: (pt: Omit<PT, 'id' | 'activeProjectsCount'>) => { success: boolean; message: string };
   updatePT: (id: string, updates: Partial<PT>) => void;
   updatePTLogo: (id: string, logoUrl: string) => void;
+  deletePT: (id: string) => { success: boolean; message: string };
   addClient: (client: Omit<Client, 'id' | 'isActive'>) => void;
   updateClient: (id: string, updates: Partial<Client>) => void;
   addProject: (proj: Omit<Project, 'id' | 'plannedProgressPercent' | 'actualProgressPercent' | 'totalCostRealized' | 'totalPaidOut' | 'unpaidCommitments' | 'targetProfitNominal' | 'totalRapBudget'>) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
+  deleteProject: (id: string) => { success: boolean; message: string };
   importRABItems: (newItems: Omit<RABItem, 'id'>[]) => void;
   updateRABItemStatus: (id: string, status: RABItem['status'], notes?: string) => void;
   mapRABtoAHS: (rabItemId: string, ahsCode: string) => void;
@@ -128,6 +131,8 @@ interface AppContextType {
   submitDailyReport: (report: Omit<DailyReport, 'id' | 'reportNumber'>) => void;
   addFinancialEntry: (entry: Omit<FinancialEntry, 'id'>) => void;
   resolveWarning: (warningId: string) => void;
+  deleteWarning: (warningId: string) => void;
+  clearAllWarnings: (projectId?: string) => void;
   resetAllData: () => void;
   addUser: (user: Omit<AppUser, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<AppUser>) => void;
@@ -196,9 +201,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.roles) setRoles(parsed.roles);
-        if (parsed.pts) setPts(parsed.pts);
+        if (parsed.pts) {
+          const seen = new Set<string>();
+          const unique = parsed.pts.filter((p: PT) => {
+            const key = p.code.trim().toUpperCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          });
+          setPts(unique);
+        }
         if (parsed.clients) setClients(parsed.clients);
-        if (parsed.projects) setProjects(parsed.projects);
+        if (parsed.projects) {
+          const sanitizedProjects = parsed.projects.map((p: Project) => {
+            const marginPct = typeof p.targetProfitPercent === 'number' ? p.targetProfitPercent : 18;
+            const contractVal = typeof p.contractValue === 'number' ? p.contractValue : 0;
+            const profitNominal = Math.round((contractVal * marginPct) / 100);
+            const rapBudget = contractVal - profitNominal;
+            return {
+              ...p,
+              targetProfitNominal: profitNominal,
+              totalRapBudget: p.totalRapBudget || rapBudget
+            };
+          });
+          setProjects(sanitizedProjects);
+        }
         if (parsed.rabItems) setRabItems(parsed.rabItems);
         if (parsed.rapItems) setRapItems(parsed.rapItems);
         if (parsed.materialRequests) setMaterialRequests(parsed.materialRequests);
@@ -254,10 +281,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const handleSetActivePTId = (ptId: string) => {
     setActivePTId(ptId);
-    // Auto switch active project to a project belonging to this PT
-    const firstProj = projects.find(p => p.ptId === ptId);
-    if (firstProj) {
-      setActiveProjectId(firstProj.id);
+    // Auto switch active project to a project strictly belonging to this PT
+    const ptProjects = projects.filter(p => p.ptId === ptId);
+    if (ptProjects.length > 0) {
+      setActiveProjectId(ptProjects[0].id);
+    } else {
+      setActiveProjectId('');
     }
   };
 
@@ -279,18 +308,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveState({ auditLogs: updated });
   };
 
-  // Add New Company (PT)
+  // Add New Company (PT) with Duplicate Prevention
   const addPT = (newPTData: Omit<PT, 'id' | 'activeProjectsCount'>) => {
+    const trimmedCode = newPTData.code.trim().toUpperCase();
+    const trimmedName = newPTData.name.trim().toLowerCase();
+
+    // Prevent duplicate Code or Name
+    const duplicateCode = pts.find(p => p.code.trim().toUpperCase() === trimmedCode);
+    if (duplicateCode) {
+      alert(`Kode Perusahaan "${trimmedCode}" sudah digunakan oleh "${duplicateCode.name}"! Harap gunakan kode PT yang berbeda.`);
+      return { success: false, message: `Kode "${trimmedCode}" sudah terdaftar.` };
+    }
+
+    const duplicateName = pts.find(p => p.name.trim().toLowerCase() === trimmedName);
+    if (duplicateName) {
+      alert(`Nama Perusahaan "${newPTData.name}" sudah terdaftar dengan kode "${duplicateName.code}"! Harap gunakan nama PT yang berbeda.`);
+      return { success: false, message: `Nama "${newPTData.name}" sudah terdaftar.` };
+    }
+
     const newPT: PT = {
       ...newPTData,
+      code: trimmedCode,
+      name: newPTData.name.trim(),
       id: `pt-${Date.now()}`,
       activeProjectsCount: 0
     };
     const updated = [...pts, newPT];
     setPts(updated);
     setActivePTId(newPT.id);
+    setActiveProjectId(''); // PT baru belum memiliki proyek
     addAudit('Tambah PT Baru', 'PT', newPT.code, `Mendaftarkan entitas perusahaan baru: ${newPT.name} (NPWP: ${newPT.npwp})`);
     saveState({ pts: updated });
+    return { success: true, message: 'Perusahaan berhasil ditambahkan.' };
+  };
+
+  // Delete Company (PT)
+  const deletePT = (id: string) => {
+    if (pts.length <= 1) {
+      alert('Minimal harus ada 1 perusahaan di sistem. Tidak dapat menghapus perusahaan terakhir.');
+      return { success: false, message: 'Minimal 1 perusahaan harus ada.' };
+    }
+
+    const ptToDelete = pts.find(p => p.id === id);
+    const relatedProjects = projects.filter(p => p.ptId === id);
+
+    if (relatedProjects.length > 0) {
+      if (!confirm(`Perusahaan ${ptToDelete?.name || id} memiliki ${relatedProjects.length} proyek aktif. Seluruh proyek terkait akan ikut dihapus. Lanjutkan?`)) {
+        return { success: false, message: 'Penghapusan dibatalkan.' };
+      }
+    }
+
+    const remainingProjects = projects.filter(p => p.ptId !== id);
+    const updatedPts = pts.filter(p => p.id !== id);
+
+    setProjects(remainingProjects);
+    setPts(updatedPts);
+
+    if (activePTId === id && updatedPts.length > 0) {
+      handleSetActivePTId(updatedPts[0].id);
+    }
+
+    addAudit('Hapus PT', 'PT', id, `Menghapus perusahaan: ${ptToDelete?.name || id} (${ptToDelete?.code})`);
+    saveState({ pts: updatedPts, projects: remainingProjects });
+    return { success: true, message: 'Perusahaan berhasil dihapus.' };
   };
 
   // Update Company (PT) & Logo
@@ -355,6 +435,44 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     addAudit('Daftarkan Proyek Baru', 'Project', newProj.code, `Mendaftarkan proyek baru: ${newProj.name} dengan nilai kontrak Rp ${newProj.contractValue.toLocaleString('id-ID')}`);
     saveState({ projects: updatedProjects, pts: updatedPts });
+  };
+
+  // Update Project Details & Auto-Recalculate Profit & RAP
+  const updateProject = (id: string, updates: Partial<Project>) => {
+    const updated = projects.map(p => {
+      if (p.id !== id) return p;
+      const merged = { ...p, ...updates };
+      const contractVal = updates.contractValue !== undefined ? updates.contractValue : p.contractValue;
+      const marginPct = updates.targetProfitPercent !== undefined ? updates.targetProfitPercent : p.targetProfitPercent;
+      const profitNominal = Math.round((contractVal * marginPct) / 100);
+      const rapBudget = contractVal - profitNominal;
+      return {
+        ...merged,
+        targetProfitNominal: profitNominal,
+        totalRapBudget: rapBudget
+      };
+    });
+    setProjects(updated);
+    addAudit('Update Proyek', 'Project', id, `Memperbarui data dan parameter proyek ID: ${id}`);
+    saveState({ projects: updated });
+  };
+
+  // Delete Project
+  const deleteProject = (id: string) => {
+    const projToDelete = projects.find(p => p.id === id);
+    if (!projToDelete) return { success: false, message: 'Proyek tidak ditemukan.' };
+
+    const remaining = projects.filter(p => p.id !== id);
+    setProjects(remaining);
+
+    if (activeProjectId === id) {
+      const samePtProject = remaining.find(p => p.ptId === projToDelete.ptId);
+      setActiveProjectId(samePtProject ? samePtProject.id : (remaining[0]?.id || ''));
+    }
+
+    addAudit('Hapus Proyek', 'Project', id, `Menghapus proyek: ${projToDelete.name} (${projToDelete.code})`);
+    saveState({ projects: remaining });
+    return { success: true, message: 'Proyek berhasil dihapus.' };
   };
 
   // Import RAB Items
@@ -1122,6 +1240,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     saveState({ warnings: updated });
   };
 
+  const deleteWarning = (warningId: string) => {
+    const updated = warnings.filter(w => w.id !== warningId);
+    setWarnings(updated);
+    addAudit('Hapus Peringatan', 'WarningAlert', warningId, 'Peringatan risiko dihapus oleh Super Admin / Direktur');
+    saveState({ warnings: updated });
+  };
+
+  const clearAllWarnings = (projectId?: string) => {
+    const updated = projectId ? warnings.filter(w => w.projectId !== projectId) : [];
+    setWarnings(updated);
+    addAudit('Hapus Semua Peringatan', 'WarningAlert', 'ALL', 'Seluruh peringatan risiko dibersihkan oleh Super Admin / Direktur');
+    saveState({ warnings: updated });
+  };
+
   const resetAllData = () => {
     localStorage.removeItem(STORAGE_KEY);
     setPts(INITIAL_PTS);
@@ -1681,9 +1813,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addPT,
         updatePT,
         updatePTLogo,
+        deletePT,
         addClient,
         updateClient,
         addProject,
+        updateProject,
+        deleteProject,
         importRABItems,
         updateRABItemStatus,
         mapRABtoAHS,
@@ -1698,6 +1833,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         submitDailyReport,
         addFinancialEntry,
         resolveWarning,
+        deleteWarning,
+        clearAllWarnings,
         resetAllData,
         updateRoleLimit,
         resetRoleLimits,
